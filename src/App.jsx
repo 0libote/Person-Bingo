@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti';
 
 const App = () => {
   const [isSetupMode, setIsSetupMode] = useState(true);
-  const [cardName, setCardName] = useState('Person Bingo');
+  const [cardName, setCardName] = useState('My Bingo Card');
   const [gridSize, setGridSize] = useState(5);
   const [items, setItems] = useState(Array(25).fill(''));
   const [markedSquares, setMarkedSquares] = useState(Array(25).fill(false));
@@ -36,48 +36,49 @@ const App = () => {
     setWinner(false);
   }, [gridSize]);
 
+  // BLACKOUT WIN LOGIC
   const checkForWin = useCallback((currentMarkedSquares) => {
-    let hasWin = false;
-    const size = gridSize;
+    // Filter out items that are empty (if user didn't fill entire grid)
+    // We only require marking squares that actually have content
+    const activeIndices = items.map((item, index) => item.trim() !== '' ? index : -1).filter(i => i !== -1);
 
-    // Check Rows
-    for (let i = 0; i < size; i++) {
-      if (currentMarkedSquares.slice(i * size, (i + 1) * size).every(Boolean)) hasWin = true;
-    }
+    if (activeIndices.length === 0) return; // No items to mark
 
-    // Check Columns
-    for (let i = 0; i < size; i++) {
-      let colWin = true;
-      for (let j = 0; j < size; j++) {
-        if (!currentMarkedSquares[i + j * size]) colWin = false;
-      }
-      if (colWin) hasWin = true;
-    }
+    const allActiveMarked = activeIndices.every(index => currentMarkedSquares[index]);
 
-    // Check Diagonals
-    let diag1Win = true;
-    let diag2Win = true;
-    for (let i = 0; i < size; i++) {
-      if (!currentMarkedSquares[i * size + i]) diag1Win = false;
-      if (!currentMarkedSquares[(i + 1) * size - (i + 1)]) diag2Win = false;
-    }
-    if (diag1Win || diag2Win) hasWin = true;
-
-    if (hasWin && !winner) {
+    if (allActiveMarked && !winner) {
       setWinner(true);
       triggerConfetti();
-    } else if (!hasWin) {
+    } else if (!allActiveMarked) {
       setWinner(false);
     }
-  }, [gridSize, winner]);
+  }, [items, winner]);
 
   const triggerConfetti = () => {
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#6366f1', '#ec4899', '#8b5cf6', '#3b82f6'] // Indigo, Pink, Violet, Blue
-    });
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#8b5cf6', '#ec4899', '#ffffff']
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#8b5cf6', '#ec4899', '#ffffff']
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+    frame();
   };
 
   const handleItemChange = (index, value) => {
@@ -87,6 +88,8 @@ const App = () => {
   };
 
   const toggleSquare = (index) => {
+    // Only allow marking if there is text? Optional, but good UX.
+    // For now allow marking any to be safe.
     const newMarkedSquares = [...markedSquares];
     newMarkedSquares[index] = !newMarkedSquares[index];
     setMarkedSquares(newMarkedSquares);
@@ -101,236 +104,253 @@ const App = () => {
   };
 
   const startGame = () => {
-    setIsSetupMode(false);
+    if (items.filter(i => i.trim()).length > 0) {
+      setIsSetupMode(false);
+    }
   };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
-  // Improved Theme classes
-  const bgClass = darkMode
-    ? 'bg-slate-900'
-    : 'bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50';
-
-  const textClass = darkMode ? 'text-slate-100' : 'text-slate-800';
-  const secondaryTextClass = darkMode ? 'text-slate-400' : 'text-slate-500';
-
-  const cardClass = darkMode
-    ? 'bg-slate-800/80 border-slate-700 shadow-xl backdrop-blur-sm'
-    : 'bg-white/80 border-white/50 shadow-xl backdrop-blur-sm';
-
-  const inputClass = darkMode
-    ? 'bg-slate-900 border-slate-700 text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
-    : 'bg-white border-slate-200 text-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500';
-
-  const buttonClass = 'px-6 py-3 rounded-lg font-semibold shadow-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]';
-  const primaryButtonClass = `${buttonClass} bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`;
-  const dangerButtonClass = `${buttonClass} bg-rose-500 text-white hover:bg-rose-600 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2`;
-  const secondaryButtonClass = `${buttonClass} ${darkMode ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'} focus:ring-2 focus:ring-slate-400 focus:ring-offset-2`;
-
-  const gridSquareClass = (isMarked) => `
-    aspect-square relative group rounded-xl transition-all duration-200 cursor-pointer border-2 flex items-center justify-center p-2 text-center text-sm font-medium
-    ${isMarked
-      ? 'bg-indigo-500 border-indigo-500 text-white shadow-indigo-500/30 shadow-lg scale-[0.98]'
-      : `${darkMode ? 'bg-slate-700/50 border-slate-600 hover:border-indigo-500/50 hover:bg-slate-700' : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'} shadow-sm hover:shadow-md`
-    }
-  `;
+  // --- PREMIUM THEME SYSTEM ---
+  const theme = darkMode ? {
+    appBg: 'bg-zinc-950',
+    textMain: 'text-white',
+    textMuted: 'text-zinc-400',
+    cardBg: 'bg-zinc-900/50',
+    cardBorder: 'border-zinc-800',
+    inputBg: 'bg-zinc-900',
+    inputBorder: 'border-zinc-700',
+    primary: 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/20',
+    squareUnmarked: 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-violet-500/50',
+    squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/40',
+  } : {
+    appBg: 'bg-[#FDFDFE]', // Very subtle off-white
+    textMain: 'text-zinc-900',
+    textMuted: 'text-zinc-500',
+    cardBg: 'bg-white/70',
+    cardBorder: 'border-zinc-200/50',
+    inputBg: 'bg-white',
+    inputBorder: 'border-zinc-200',
+    primary: 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-500/30',
+    squareUnmarked: 'bg-white border-zinc-200 text-zinc-700 hover:border-violet-300 hover:shadow-md',
+    squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-xl shadow-violet-500/30',
+  };
 
   return (
-    <div className={`min-h-screen ${bgClass} py-8 px-4 transition-colors duration-500 font-sans`}>
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className={`min-h-screen ${theme.appBg} transition-colors duration-500 font-sans selection:bg-violet-500/30`}>
+      {/* Abstract Background Shapes */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className={`absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-30 animate-float ${darkMode ? 'bg-violet-900' : 'bg-violet-200'}`} />
+        <div className={`absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full blur-[100px] opacity-20 animate-pulse-slow ${darkMode ? 'bg-fuchsia-900' : 'bg-fuchsia-200'}`} />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-6 py-12 flex flex-col min-h-screen">
 
         {/* Header */}
-        <header className="flex justify-between items-center bg-transparent">
-          <div>
-            <h1 className={`text-4xl font-extrabold tracking-tight ${textClass} mb-1 bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500`}>
-              {isSetupMode ? 'Setup Bingo' : cardName}
+        <header className="flex justify-between items-center mb-12">
+          <div className="flex flex-col">
+            <h1 className={`text-5xl font-extrabold tracking-tight ${theme.textMain} mb-2`}>
+              {isSetupMode ? 'Create Your Board' : cardName}
             </h1>
-            {!isSetupMode && <p className={`text-sm ${secondaryTextClass}`}>Click squares to mark them</p>}
+            {!isSetupMode && !winner && <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+              </span>
+              <p className={`text-sm font-medium ${theme.textMuted} tracking-wide uppercase`}>Blackout to Win</p>
+            </div>}
+            {winner && <div className="flex items-center gap-2">
+              <span className="text-xl">🏆</span>
+              <p className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500">COMPLETE BLACKOUT!</p>
+            </div>}
           </div>
 
           <button
             onClick={toggleDarkMode}
-            className={`p-3 rounded-full ${darkMode ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50 shadow-md'} transition-all duration-200`}
-            aria-label="Toggle Dark Mode"
+            className={`p-4 rounded-2xl ${darkMode ? 'bg-zinc-900 text-yellow-400 border border-zinc-800' : 'bg-white text-zinc-600 shadow-lg shadow-zinc-200/50'} hover:scale-105 active:scale-95 transition-all duration-300`}
           >
             {darkMode ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z" /></svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
             )}
           </button>
         </header>
 
-        {isSetupMode ? (
-          /* Setup Mode */
-          <div className={`${cardClass} rounded-2xl p-8 border backdrop-filter`}>
-            <div className="space-y-6">
-              {/* General Settings */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={`block text-sm font-semibold ${secondaryTextClass} mb-2 uppercase tracking-wider`}>Card Name</label>
-                  <input
-                    type="text"
-                    value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${inputClass}`}
-                    placeholder="e.g. Office Buzzwords Bingo"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-semibold ${secondaryTextClass} mb-2 uppercase tracking-wider`}>Grid Size: {gridSize}x{gridSize}</label>
-                  <input
-                    type="range"
-                    min="3"
-                    max="7"
-                    value={gridSize}
-                    onChange={(e) => setGridSize(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 mt-3"
-                  />
-                  <div className={`flex justify-between text-xs mt-2 ${secondaryTextClass}`}>
-                    <span>3x3</span>
-                    <span>7x7</span>
+        {/* Content */}
+        <div className={`flex-1 flex flex-col ${isSetupMode ? '' : 'justify-center'}`}>
+
+          {isSetupMode ? (
+            /* --- SETUP MODE --- */
+            <div className={`${theme.cardBg} backdrop-blur-xl border ${theme.cardBorder} rounded-3xl p-10 shadow-2xl transition-all duration-500`}>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Left Col: Config */}
+                <div className="lg:col-span-4 space-y-8">
+                  <div>
+                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider mb-3`}>Project Name</label>
+                    <input
+                      type="text"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value)}
+                      className={`w-full px-5 py-4 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all font-medium text-lg`}
+                      placeholder="e.g. Sales Team Bingo"
+                    />
                   </div>
-                </div>
-              </div>
 
-              <div>
-                <label className={`block text-sm font-semibold ${secondaryTextClass} mb-2 uppercase tracking-wider`}>Instant Win Condition</label>
-                <input
-                  type="text"
-                  value={instantWin}
-                  onChange={(e) => setInstantWin(e.target.value)}
-                  placeholder="e.g., They arrive 15 minutes late"
-                  className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${inputClass}`}
-                />
-                <p className={`text-xs mt-2 ${secondaryTextClass}`}>A special condition for an instant victory!</p>
-              </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider`}>Grid Size</label>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900'}`}>{gridSize} × {gridSize}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="3"
+                      max="7"
+                      value={gridSize}
+                      onChange={(e) => setGridSize(parseInt(e.target.value))}
+                      className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                    />
+                  </div>
 
-              {/* Items Grid */}
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className={`text-xl font-bold ${textClass}`}>Grid Items</h2>
+                  <div>
+                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider mb-3`}>Instant Win (Optional)</label>
+                    <textarea
+                      value={instantWin}
+                      onChange={(e) => setInstantWin(e.target.value)}
+                      rows={3}
+                      className={`w-full px-5 py-4 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:ring-2 focus:ring-violet-500 outline-none transition-all resize-none`}
+                      placeholder="Enter a rare condition that grants immediate victory..."
+                    />
+                  </div>
+
                   <button
-                    onClick={() => {
-                      const newItems = Array(gridSize * gridSize).fill('');
-                      setItems(newItems);
-                    }}
-                    className={`text-sm text-indigo-500 hover:text-indigo-600 font-medium`}
+                    onClick={startGame}
+                    disabled={items.filter(item => item.trim() !== '').length < gridSize * gridSize}
+                    className={`w-full py-4 rounded-2xl font-bold text-lg tracking-wide shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${theme.primary} disabled:opacity-50 disabled:cursor-not-allowed mt-4`}
                   >
-                    Clear All
+                    Launch Game
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {/* Right Col: Grid Editor */}
+                <div className="lg:col-span-8">
+                  <div className="flex justify-between items-end mb-6">
+                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider`}>Grid Content</label>
+                    <button
+                      onClick={() => setItems(Array(gridSize * gridSize).fill(''))}
+                      className={`text-xs font-bold text-violet-500 hover:text-violet-400 transition-colors uppercaseTracking-wider`}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 max-h-[500px] overflow-y-auto custom-scrollbar p-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                    {items.map((item, index) => (
+                      <div key={index} className="relative group">
+                        <span className={`absolute top-3 left-3 text-[10px] font-bold ${theme.textMuted} pointer-events-none`}>{(index + 1).toString().padStart(2, '0')}</span>
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={(e) => handleItemChange(index, e.target.value)}
+                          className={`w-full h-24 px-4 pt-6 pb-2 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-sm font-medium text-center break-words`}
+                          placeholder="..."
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* --- GAME MODE --- */
+            <div className="flex flex-col items-center w-full">
+
+              <div className={`relative ${theme.cardBg} backdrop-blur-xl border ${theme.cardBorder} rounded-[2rem] p-6 md:p-10 shadow-2xl transition-all duration-500 w-full max-w-2xl`}>
+
+                <div
+                  className="grid gap-4 md:gap-5 mx-auto"
+                  style={{
+                    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`
+                  }}
+                >
                   {items.map((item, index) => (
-                    <div key={index} className="flex items-center group">
-                      <span className={`w-8 text-sm font-mono ${secondaryTextClass} group-focus-within:text-indigo-500`}>{(index + 1).toString().padStart(2, '0')}</span>
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => handleItemChange(index, e.target.value)}
-                        placeholder={`Square ${index + 1}`}
-                        className={`flex-1 px-4 py-2 rounded-lg border outline-none transition-all ${inputClass}`}
-                      />
-                    </div>
+                    <button
+                      key={index}
+                      onClick={() => toggleSquare(index)}
+                      className={`
+                                aspect-square relative rounded-2xl transition-all duration-300 flex items-center justify-center p-3 md:p-4 text-center group
+                                ${markedSquares[index] ? theme.squareMarked : theme.squareUnmarked}
+                                ${!item.trim() ? 'opacity-50 cursor-default' : 'cursor-pointer'}
+                            `}
+                    >
+                      {markedSquares[index] && (
+                        <div className="absolute top-2 right-2 text-white/40">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                        </div>
+                      )}
+                      <span className={`text-xs md:text-sm font-semibold leading-tight break-words select-none ${markedSquares[index] ? 'opacity-100 transform scale-105' : 'opacity-90 group-hover:scale-105 transition-transform'}`}>
+                        {item}
+                      </span>
+                    </button>
                   ))}
                 </div>
-              </div>
 
-              <div className="pt-4 flex justify-end">
-                <button
-                  onClick={startGame}
-                  disabled={items.filter(item => item.trim() !== '').length < gridSize * gridSize}
-                  className={`${primaryButtonClass} w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {items.filter(item => item.trim() !== '').length < gridSize * gridSize
-                    ? `Fill all ${gridSize * gridSize} items`
-                    : 'Create Card & Play'
-                  }
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Game Mode */
-          <div className="space-y-6">
-            <div className={`${cardClass} rounded-2xl p-6 md:p-8 border`}>
-              {winner && (
-                <div className="mb-6 p-4 bg-green-100 border-green-400 border text-green-700 rounded-xl flex items-center justify-center animate-bounce">
-                  <span className="text-xl font-bold">🎉 BINGO! We have a winner! 🎉</span>
-                </div>
-              )}
-
-              <div
-                className="grid gap-4"
-                style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-              >
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className={gridSquareClass(markedSquares[index])}
-                    onClick={() => toggleSquare(index)}
-                  >
-                    <span className={markedSquares[index] ? 'line-through opacity-90' : ''}>
-                      {item || <span className="text-slate-300 italic">Empty</span>}
-                    </span>
-
+                {instantWin && (
+                  <div className="mt-8 pt-8 border-t border-zinc-200/50 dark:border-zinc-700/50">
+                    <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-amber-900/10 border-amber-900/30' : 'bg-amber-50 border-amber-200/50'} flex gap-4 items-start`}>
+                      <div className="p-2 bg-amber-500/10 rounded-xl text-amber-500">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                      </div>
+                      <div>
+                        <h3 className={`text-xs font-bold uppercase tracking-wider text-amber-500 mb-1`}>Instant Win Condition</h3>
+                        <p className={`font-medium ${darkMode ? 'text-amber-100' : 'text-amber-900'}`}>{instantWin}</p>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
 
-              {instantWin && (
-                <div className={`mt-8 p-4 rounded-xl border-l-4 border-amber-400 ${darkMode ? 'bg-amber-900/20' : 'bg-amber-50'}`}>
-                  <h3 className={`text-xs font-bold uppercase tracking-wide text-amber-500 mb-1`}>Instant Win Condition</h3>
-                  <p className={`text-lg font-medium ${darkMode ? 'text-amber-100' : 'text-amber-800'}`}>
-                    {instantWin}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-center pt-4">
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className={secondaryButtonClass}
+                className={`mt-10 group flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${theme.textMuted} hover:${theme.textMain} hover:bg-zinc-100 dark:hover:bg-zinc-800`}
               >
-                Edit / Reset Card
+                <svg className="w-4 h-4 transition-transform group-hover:-rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span>Reset or Edit Board</span>
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Reset Confirmation Modal */}
-        {showResetConfirm && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className={`${cardClass} rounded-2xl p-8 max-w-sm w-full border transform transition-all scale-100`}>
-              <h3 className={`text-2xl font-bold ${textClass} mb-2`}>Reset Everything?</h3>
-              <p className={`${secondaryTextClass} mb-6`}>
-                This will clear your current game progress and take you back to the setup screen.
-              </p>
-              <div className="flex gap-4 flex-col-reverse md:flex-row">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className={`${secondaryButtonClass} w-full justify-center md:w-auto`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={resetCard}
-                  className={`${dangerButtonClass} w-full justify-center md:w-auto`}
-                >
-                  Reset Game
-                </button>
+          {/* Reset Confirmation Modal */}
+          {showResetConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowResetConfirm(false)} />
+              <div className={`relative ${theme.cardBg} backdrop-blur-xl p-8 rounded-3xl shadow-2xl max-w-sm w-full border ${theme.cardBorder} transform scale-100 transition-all`}>
+                <h3 className={`text-2xl font-bold ${theme.textMain} mb-3`}>Start Over?</h3>
+                <p className={`${theme.textMuted} mb-8 leading-relaxed`}>
+                  This will reset your current board and marking progress.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className={`px-4 py-3 rounded-xl font-bold text-sm ${darkMode ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'} transition-colors`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={resetCard}
+                    className="px-4 py-3 rounded-xl font-bold text-sm bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-500/20 transition-all"
+                  >
+                    Yes, Reset
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+        </div>
       </div>
     </div>
   );
