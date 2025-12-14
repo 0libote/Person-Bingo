@@ -1,49 +1,85 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import html2canvas from 'html2canvas';
+import { saveAs } from 'file-saver';
 
 const App = () => {
+  // --- STATE ---
   const [isSetupMode, setIsSetupMode] = useState(true);
   const [cardName, setCardName] = useState('My Bingo Card');
-  const [gridSize, setGridSize] = useState(5);
-  const [items, setItems] = useState(Array(25).fill(''));
-  const [markedSquares, setMarkedSquares] = useState(Array(25).fill(false));
+  const [gridSize, setGridSize] = useState(3); // Default to 3x3
+  const [items, setItems] = useState(Array(9).fill('')); // 3x3 = 9
+  const [markedSquares, setMarkedSquares] = useState(Array(9).fill(false));
   const [instantWin, setInstantWin] = useState('');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [winner, setWinner] = useState(false);
+  const [personImage, setPersonImage] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const cardRef = useRef(null);
 
-  // Initialize items array when grid size changes
+  // --- PERSISTENCE ---
   useEffect(() => {
-    const totalSquares = gridSize * gridSize;
+    const saved = localStorage.getItem('person-bingo-data');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setCardName(data.cardName || 'My Bingo Card');
+        setGridSize(data.gridSize || 3);
+        setItems(data.items || Array(9).fill(''));
+        setMarkedSquares(data.markedSquares || Array(9).fill(false));
+        setInstantWin(data.instantWin || '');
+        setPersonImage(data.personImage || null);
+        setIsSetupMode(data.isSetupMode ?? true);
+        setZoomLevel(data.zoomLevel || 1);
+      } catch (e) {
+        console.error("Failed to load saved data", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const data = {
+      cardName,
+      gridSize,
+      items,
+      markedSquares,
+      instantWin,
+      personImage,
+      isSetupMode,
+      zoomLevel
+    };
+    localStorage.setItem('person-bingo-data', JSON.stringify(data));
+  }, [cardName, gridSize, items, markedSquares, instantWin, personImage, isSetupMode, zoomLevel]);
+
+  // --- GRID SIZE HANDLER ---
+  const updateGridSize = (newSize) => {
+    const size = parseInt(newSize);
+    setGridSize(size);
+    const totalSquares = size * size;
+
+    // Resize items array, preserving existing content where possible
     setItems(prev => {
       const newItems = Array(totalSquares).fill('');
       prev.forEach((item, index) => {
-        if (index < totalSquares) {
-          newItems[index] = item;
-        }
+        if (index < totalSquares) newItems[index] = item;
       });
       return newItems;
     });
+
     setMarkedSquares(prev => {
       const newMarked = Array(totalSquares).fill(false);
       prev.forEach((marked, index) => {
-        if (index < totalSquares) {
-          newMarked[index] = marked;
-        }
+        if (index < totalSquares) newMarked[index] = marked;
       });
       return newMarked;
     });
-    setWinner(false);
-  }, [gridSize]);
+    setWinner(false); // Reset win state on resize
+  };
 
-  // BLACKOUT WIN LOGIC
+  // --- GAME LOGIC ---
   const checkForWin = useCallback((currentMarkedSquares) => {
-    // Filter out items that are empty (if user didn't fill entire grid)
-    // We only require marking squares that actually have content
     const activeIndices = items.map((item, index) => item.trim() !== '' ? index : -1).filter(i => i !== -1);
-
-    if (activeIndices.length === 0) return; // No items to mark
-
+    if (activeIndices.length === 0) return;
     const allActiveMarked = activeIndices.every(index => currentMarkedSquares[index]);
 
     if (allActiveMarked && !winner) {
@@ -57,28 +93,21 @@ const App = () => {
   const triggerConfetti = () => {
     const duration = 3000;
     const end = Date.now() + duration;
-
     const frame = () => {
-      confetti({
-        particleCount: 5,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors: ['#8b5cf6', '#ec4899', '#ffffff']
-      });
-      confetti({
-        particleCount: 5,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors: ['#8b5cf6', '#ec4899', '#ffffff']
-      });
-
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
+      const colors = ['#8b5cf6', '#ec4899', '#ffffff'];
+      confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
+  };
+
+  const toggleSquare = (index) => {
+    if (!items[index].trim()) return;
+    const newMarkedSquares = [...markedSquares];
+    newMarkedSquares[index] = !newMarkedSquares[index];
+    setMarkedSquares(newMarkedSquares);
+    checkForWin(newMarkedSquares);
   };
 
   const handleItemChange = (index, value) => {
@@ -87,34 +116,88 @@ const App = () => {
     setItems(newItems);
   };
 
-  const toggleSquare = (index) => {
-    // Only allow marking if there is text? Optional, but good UX.
-    // For now allow marking any to be safe.
-    const newMarkedSquares = [...markedSquares];
-    newMarkedSquares[index] = !newMarkedSquares[index];
-    setMarkedSquares(newMarkedSquares);
-    checkForWin(newMarkedSquares);
-  };
-
-  const resetCard = () => {
-    setIsSetupMode(true);
-    setShowResetConfirm(false);
-    setWinner(false);
-    setMarkedSquares(Array(gridSize * gridSize).fill(false));
-  };
-
-  const startGame = () => {
-    if (items.filter(i => i.trim()).length > 0) {
-      setIsSetupMode(false);
+  // --- IMAGE & IMPORT/EXPORT ---
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPersonImage(reader.result);
+      reader.readAsDataURL(file);
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+  const exportData = () => {
+    const data = { cardName, gridSize, items, markedSquares, instantWin, personImage };
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json;charset=utf-8" });
+    saveAs(blob, "bingo-preset.json");
   };
 
-  // --- PREMIUM THEME SYSTEM ---
-  const theme = darkMode ? {
+  const importData = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          setCardName(data.cardName || cardName);
+          updateGridSize(data.gridSize || gridSize); // Use helper to resize arrays correctly
+          // Need to set items/marked after updateGridSize logic runs, or just override it directly if we trust the import
+          setTimeout(() => {
+            setItems(data.items || Array(data.gridSize * data.gridSize).fill(''));
+            setMarkedSquares(data.markedSquares || Array(data.gridSize * data.gridSize).fill(false));
+            setInstantWin(data.instantWin || '');
+            setPersonImage(data.personImage || null);
+          }, 0);
+        } catch (err) {
+          alert('Invalid file format');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const downloadCardImage = async () => {
+    if (cardRef.current) {
+      try {
+        // Temporarily enhance visibility for capture
+        const canvas = await html2canvas(cardRef.current, {
+          backgroundColor: '#0f172a', // zinc-950
+          scale: 2, // High res
+          useCORS: true
+        });
+        canvas.toBlob((blob) => {
+          saveAs(blob, `${cardName.replace(/\s+/g, '-')}.png`);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Failed to generate image.");
+      }
+    }
+  };
+
+  const resetGame = () => {
+    setMarkedSquares(Array(gridSize * gridSize).fill(false));
+    setWinner(false);
+    setShowResetConfirm(false);
+  };
+
+  const fullReset = () => {
+    setIsSetupMode(true);
+    resetGame();
+  };
+
+  // --- UTILS ---
+  const getTextSizeClass = (text) => {
+    const len = text.length;
+    if (len < 5) return 'text-2xl md:text-3xl';
+    if (len < 15) return 'text-lg md:text-xl';
+    if (len < 30) return 'text-base md:text-lg';
+    return 'text-xs md:text-sm';
+  };
+
+  // --- THEME ---
+  // Forced Dark Mode Theme
+  const theme = {
     appBg: 'bg-zinc-950',
     textMain: 'text-white',
     textMuted: 'text-zinc-400',
@@ -123,234 +206,240 @@ const App = () => {
     inputBg: 'bg-zinc-900',
     inputBorder: 'border-zinc-700',
     primary: 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/20',
-    squareUnmarked: 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-violet-500/50',
-    squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/40',
-  } : {
-    appBg: 'bg-[#FDFDFE]', // Very subtle off-white
-    textMain: 'text-zinc-900',
-    textMuted: 'text-zinc-500',
-    cardBg: 'bg-white/70',
-    cardBorder: 'border-zinc-200/50',
-    inputBg: 'bg-white',
-    inputBorder: 'border-zinc-200',
-    primary: 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-500/30',
-    squareUnmarked: 'bg-white border-zinc-200 text-zinc-700 hover:border-violet-300 hover:shadow-md',
-    squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-xl shadow-violet-500/30',
+    squareUnmarked: 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-violet-500/50 cursor-pointer',
+    squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/40 cursor-pointer',
+    squareEmpty: 'bg-zinc-950 border-zinc-900 text-zinc-700 opacity-50 cursor-default',
   };
 
   return (
-    <div className={`min-h-screen ${theme.appBg} transition-colors duration-500 font-sans selection:bg-violet-500/30`}>
-      {/* Abstract Background Shapes */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-30 animate-float ${darkMode ? 'bg-violet-900' : 'bg-violet-200'}`} />
-        <div className={`absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full blur-[100px] opacity-20 animate-pulse-slow ${darkMode ? 'bg-fuchsia-900' : 'bg-fuchsia-200'}`} />
+    <div className={`min-h-screen ${theme.appBg} text-white font-sans selection:bg-violet-500/30 overflow-x-hidden`}>
+
+      {/* Background Ambience */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full blur-[150px] opacity-20 bg-violet-900/40 animate-float" />
+        <div className="absolute top-[40%] -right-[10%] w-[50%] h-[50%] rounded-full blur-[130px] opacity-20 bg-fuchsia-900/40 animate-pulse-slow" />
       </div>
 
-      <div className="relative max-w-5xl mx-auto px-6 py-12 flex flex-col min-h-screen">
+      {/* Main UI Container */}
+      <div
+        className="relative z-10 min-h-screen flex flex-col items-center p-6 transition-transform duration-200 ease-out"
+        style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+      >
 
-        {/* Header */}
-        <header className="flex justify-between items-center mb-12">
-          <div className="flex flex-col">
-            <h1 className={`text-5xl font-extrabold tracking-tight ${theme.textMain} mb-2`}>
-              {isSetupMode ? 'Create Your Board' : cardName}
-            </h1>
-            {!isSetupMode && !winner && <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
-              </span>
-              <p className={`text-sm font-medium ${theme.textMuted} tracking-wide uppercase`}>Blackout to Win</p>
-            </div>}
-            {winner && <div className="flex items-center gap-2">
-              <span className="text-xl">🏆</span>
-              <p className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500">COMPLETE BLACKOUT!</p>
-            </div>}
+        {/* HEADER */}
+        <header className="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+          <div className="flex items-center gap-6">
+            {personImage && (
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-violet-500/30 shadow-2xl">
+                <img src={personImage} alt="Person" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
+                {cardName || 'Bingo'}
+              </h1>
+              {winner && <p className="text-xl font-bold text-fuchsia-400 mt-2 animate-bounce">🏆 COMPLETE BLACKOUT! 🏆</p>}
+            </div>
           </div>
 
-          <button
-            onClick={toggleDarkMode}
-            className={`p-4 rounded-2xl ${darkMode ? 'bg-zinc-900 text-yellow-400 border border-zinc-800' : 'bg-white text-zinc-600 shadow-lg shadow-zinc-200/50'} hover:scale-105 active:scale-95 transition-all duration-300`}
-          >
-            {darkMode ? (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z" /></svg>
-            ) : (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
+          {/* Controls Bar */}
+          <div className={`flex flex-wrap items-center gap-3 p-2 rounded-2xl ${theme.cardBg} border ${theme.cardBorder} backdrop-blur-md`}>
+            <div className="flex items-center px-4 border-r border-zinc-700/50">
+              <span className="text-xs font-bold text-zinc-500 uppercase mr-2">Zoom</span>
+              <input
+                type="range" min="0.5" max="1.3" step="0.1"
+                value={zoomLevel} onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+                className="w-20 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
+              />
+            </div>
+
+            <label className="p-2 hover:bg-zinc-700/50 rounded-lg cursor-pointer transition-colors" title="Upload Image">
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </label>
+
+            {!isSetupMode && (
+              <button onClick={downloadCardImage} className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors" title="Download PNG">
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              </button>
             )}
-          </button>
+
+            <div className="h-6 w-px bg-zinc-700/50 mx-1"></div>
+
+            <div className="relative group">
+              <button className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors" title="Import/Export">
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+              </button>
+              <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button onClick={exportData} className="w-full text-left px-4 py-2 hover:bg-zinc-800 text-sm text-zinc-300">Save Preset (JSON)</button>
+                <label className="w-full text-left px-4 py-2 hover:bg-zinc-800 text-sm text-zinc-300 block cursor-pointer">
+                  Load Preset (JSON)
+                  <input type="file" accept=".json" className="hidden" onChange={importData} />
+                </label>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsSetupMode(!isSetupMode)}
+              className={`ml-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${isSetupMode ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
+            >
+              {isSetupMode ? 'Play Game' : 'Edit Board'}
+            </button>
+          </div>
         </header>
 
-        {/* Content */}
-        <div className={`flex-1 flex flex-col ${isSetupMode ? '' : 'justify-center'}`}>
+        {isSetupMode ? (
+          /* --- EDIT MODE --- */
+          <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+            {/* Config Panel */}
+            <div className={`lg:col-span-1 p-6 rounded-3xl ${theme.cardBg} border ${theme.cardBorder} backdrop-blur-xl h-fit`}>
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <svg className="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Settings
+              </h2>
 
-          {isSetupMode ? (
-            /* --- SETUP MODE --- */
-            <div className={`${theme.cardBg} backdrop-blur-xl border ${theme.cardBorder} rounded-3xl p-10 shadow-2xl transition-all duration-500`}>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Left Col: Config */}
-                <div className="lg:col-span-4 space-y-8">
-                  <div>
-                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider mb-3`}>Project Name</label>
-                    <input
-                      type="text"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      className={`w-full px-5 py-4 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all font-medium text-lg`}
-                      placeholder="e.g. Sales Team Bingo"
-                    />
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Card Title</label>
+                  <input
+                    type="text" value={cardName} onChange={(e) => setCardName(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500`}
+                    placeholder="Name..."
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size</label>
+                    <span className="text-xs font-mono bg-zinc-800 px-2 py-1 rounded text-zinc-300">{gridSize} × {gridSize}</span>
                   </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider`}>Grid Size</label>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-900'}`}>{gridSize} × {gridSize}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="3"
-                      max="7"
-                      value={gridSize}
-                      onChange={(e) => setGridSize(parseInt(e.target.value))}
-                      className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider mb-3`}>Instant Win (Optional)</label>
-                    <textarea
-                      value={instantWin}
-                      onChange={(e) => setInstantWin(e.target.value)}
-                      rows={3}
-                      className={`w-full px-5 py-4 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:ring-2 focus:ring-violet-500 outline-none transition-all resize-none`}
-                      placeholder="Enter a rare condition that grants immediate victory..."
-                    />
-                  </div>
-
-                  <button
-                    onClick={startGame}
-                    disabled={items.filter(item => item.trim() !== '').length < gridSize * gridSize}
-                    className={`w-full py-4 rounded-2xl font-bold text-lg tracking-wide shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${theme.primary} disabled:opacity-50 disabled:cursor-not-allowed mt-4`}
-                  >
-                    Launch Game
-                  </button>
+                  <input
+                    type="range" min="3" max="7" value={gridSize} onChange={(e) => updateGridSize(e.target.value)}
+                    className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Instant Win Condition</label>
+                  <textarea
+                    value={instantWin} onChange={(e) => setInstantWin(e.target.value)} rows={3}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all resize-none ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500`}
+                    placeholder="E.g. They spill coffee..."
+                  />
                 </div>
 
-                {/* Right Col: Grid Editor */}
-                <div className="lg:col-span-8">
-                  <div className="flex justify-between items-end mb-6">
-                    <label className={`block text-xs font-bold ${theme.textMuted} uppercase tracking-wider`}>Grid Content</label>
-                    <button
-                      onClick={() => setItems(Array(gridSize * gridSize).fill(''))}
-                      className={`text-xs font-bold text-violet-500 hover:text-violet-400 transition-colors uppercaseTracking-wider`}
-                    >
-                      Clear All
-                    </button>
-                  </div>
-
-                  <div className="grid gap-3 max-h-[500px] overflow-y-auto custom-scrollbar p-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
-                    {items.map((item, index) => (
-                      <div key={index} className="relative group">
-                        <span className={`absolute top-3 left-3 text-[10px] font-bold ${theme.textMuted} pointer-events-none`}>{(index + 1).toString().padStart(2, '0')}</span>
-                        <input
-                          type="text"
-                          value={item}
-                          onChange={(e) => handleItemChange(index, e.target.value)}
-                          className={`w-full h-24 px-4 pt-6 pb-2 rounded-2xl border ${theme.inputBorder} ${theme.inputBg} ${theme.textMain} focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-sm font-medium text-center break-words`}
-                          placeholder="..."
-                        />
-                      </div>
-                    ))}
+                <div className="pt-4 border-t border-zinc-800">
+                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Actions</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => setItems(Array(gridSize * gridSize).fill(''))} className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm font-medium transition-colors">Clear Grid</button>
+                    <button onClick={() => { if (confirm('Clear Everything?')) { setItems(Array(gridSize * gridSize).fill('')); setCardName(''); setInstantWin(''); setPersonImage(null) } }} className="px-4 py-2 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 text-rose-400 text-sm font-medium transition-colors">Reset All</button>
                   </div>
                 </div>
               </div>
             </div>
-          ) : (
-            /* --- GAME MODE --- */
-            <div className="flex flex-col items-center w-full">
 
-              <div className={`relative ${theme.cardBg} backdrop-blur-xl border ${theme.cardBorder} rounded-[2rem] p-6 md:p-10 shadow-2xl transition-all duration-500 w-full max-w-2xl`}>
-
-                <div
-                  className="grid gap-4 md:gap-5 mx-auto"
-                  style={{
-                    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`
-                  }}
-                >
-                  {items.map((item, index) => (
-                    <button
-                      key={index}
-                      onClick={() => toggleSquare(index)}
-                      className={`
-                                aspect-square relative rounded-2xl transition-all duration-300 flex items-center justify-center p-3 md:p-4 text-center group
-                                ${markedSquares[index] ? theme.squareMarked : theme.squareUnmarked}
-                                ${!item.trim() ? 'opacity-50 cursor-default' : 'cursor-pointer'}
-                            `}
-                    >
-                      {markedSquares[index] && (
-                        <div className="absolute top-2 right-2 text-white/40">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                        </div>
-                      )}
-                      <span className={`text-xs md:text-sm font-semibold leading-tight break-words select-none ${markedSquares[index] ? 'opacity-100 transform scale-105' : 'opacity-90 group-hover:scale-105 transition-transform'}`}>
-                        {item}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {instantWin && (
-                  <div className="mt-8 pt-8 border-t border-zinc-200/50 dark:border-zinc-700/50">
-                    <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-amber-900/10 border-amber-900/30' : 'bg-amber-50 border-amber-200/50'} flex gap-4 items-start`}>
-                      <div className="p-2 bg-amber-500/10 rounded-xl text-amber-500">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                      </div>
-                      <div>
-                        <h3 className={`text-xs font-bold uppercase tracking-wider text-amber-500 mb-1`}>Instant Win Condition</h3>
-                        <p className={`font-medium ${darkMode ? 'text-amber-100' : 'text-amber-900'}`}>{instantWin}</p>
-                      </div>
-                    </div>
+            {/* Grid Inputs */}
+            <div className="lg:col-span-2">
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
+                {items.map((item, index) => (
+                  <div key={index} className="aspect-square relative group">
+                    <span className="absolute top-2 left-2 text-[10px] text-zinc-600 pointer-events-none z-10">{index + 1}</span>
+                    <textarea
+                      value={item}
+                      onChange={(e) => handleItemChange(index, e.target.value)}
+                      className={`w-full h-full p-2 pt-6 rounded-xl border outline-none transition-all resize-none text-center flex items-center justify-center text-sm md:text-base leading-tight ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500 focus:ring-1 focus:ring-violet-500`}
+                      placeholder="..."
+                    />
                   </div>
-                )}
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* --- PLAY MODE --- */
+          <div className="w-full max-w-4xl flex flex-col items-center animate-scale-in">
+
+            <div
+              ref={cardRef}
+              id="bingo-card"
+              className={`relative w-full p-8 md:p-12 rounded-[2.5rem] ${theme.cardBg} border ${theme.cardBorder} shadow-2xl backdrop-blur-3xl`}
+            >
+              {/* Header for Screenshot Logic (Invisible mostly but good structure) */}
+              <div className="mb-6 text-center md:text-left flex items-center gap-6 opacity-90">
+                {personImage && <img src={personImage} className="w-16 h-16 rounded-full object-cover border-2 border-violet-500/50" alt="" />}
+                <h2 className="text-3xl font-bold text-white tracking-tight">{cardName}</h2>
               </div>
 
+              <div
+                className="grid gap-4 md:gap-5"
+                style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
+              >
+                {items.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => toggleSquare(index)}
+                    className={`
+                                    aspect-square relative rounded-2xl transition-all duration-300 flex items-center justify-center p-2 text-center group
+                                    ${!item.trim() ? theme.squareEmpty : (markedSquares[index] ? theme.squareMarked : theme.squareUnmarked)}
+                                    ${getTextSizeClass(item)}
+                                    font-semibold select-none shadow-md
+                                `}
+                  >
+                    {markedSquares[index] && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                        <svg className="w-3/4 h-3/4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg>
+                      </div>
+                    )}
+                    <span className={markedSquares[index] ? 'opacity-100' : 'opacity-90'}>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              {instantWin && (
+                <div className="mt-8 pt-6 border-t border-zinc-800">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-900/10 border border-amber-900/30">
+                    <span className="text-xl">🌟</span>
+                    <div>
+                      <h3 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Instant Win</h3>
+                      <p className="text-amber-200 font-medium">{instantWin}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex gap-4">
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className={`mt-10 group flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${theme.textMuted} hover:${theme.textMain} hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+                className="px-6 py-3 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold transition-all flex items-center gap-2"
               >
-                <svg className="w-4 h-4 transition-transform group-hover:-rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                <span>Reset or Edit Board</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Clear Markers
               </button>
+              {winner && (
+                <button
+                  onClick={triggerConfetti}
+                  className="px-6 py-3 rounded-full bg-violet-600 hover:bg-violet-500 text-white font-bold transition-all shadow-lg shadow-violet-500/40 animate-pulse"
+                >
+                  Celebrate Again! 🎉
+                </button>
+              )}
             </div>
-          )}
 
-          {/* Reset Confirmation Modal */}
-          {showResetConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowResetConfirm(false)} />
-              <div className={`relative ${theme.cardBg} backdrop-blur-xl p-8 rounded-3xl shadow-2xl max-w-sm w-full border ${theme.cardBorder} transform scale-100 transition-all`}>
-                <h3 className={`text-2xl font-bold ${theme.textMain} mb-3`}>Start Over?</h3>
-                <p className={`${theme.textMuted} mb-8 leading-relaxed`}>
-                  This will reset your current board and marking progress.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setShowResetConfirm(false)}
-                    className={`px-4 py-3 rounded-xl font-bold text-sm ${darkMode ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'} transition-colors`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={resetCard}
-                    className="px-4 py-3 rounded-xl font-bold text-sm bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-500/20 transition-all"
-                  >
-                    Yes, Reset
-                  </button>
-                </div>
+          </div>
+        )}
+
+        {/* Modal */}
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-sm w-full shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-2">Clear Markers?</h3>
+              <p className="text-zinc-400 mb-6">This will uncheck all boxes. The layout will be saved.</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowResetConfirm(false)} className="px-4 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800">Cancel</button>
+                <button onClick={resetGame} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-500">Confirm</button>
               </div>
             </div>
-          )}
-
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
