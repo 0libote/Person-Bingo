@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 
 const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSquares, children }, ref) => {
-    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true } = card;
+    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar' } = card;
 
     // Font size calculator (moved from App.jsx)
     const getTextSizeClass = (text) => {
@@ -16,19 +16,34 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
     return (
         <div
             ref={ref}
-            className={`relative w-full max-w-[600px] p-8 md:p-12 rounded-[2.5rem] ${theme.cardBg} border ${theme.cardBorder} shadow-2xl backdrop-blur-3xl transition-transform duration-200 ease-out`}
+            className={`relative w-full max-w-[600px] p-8 md:p-12 rounded-[2.5rem] ${theme.cardBg} border ${theme.cardBorder} shadow-2xl backdrop-blur-3xl transition-transform duration-200 ease-out overflow-hidden`}
             style={{
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'top center'
             }}
         >
+            {/* Background Image Rendering */}
+            {imageStyle === 'background' && personImage && (
+                <>
+                    <div
+                        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 blur-sm"
+                        style={{ backgroundImage: `url(${personImage})` }}
+                    />
+                    <div
+                        className="absolute inset-0 z-0 bg-cover bg-center opacity-20"
+                        style={{ backgroundImage: `url(${personImage})` }}
+                    />
+                    <div className="absolute inset-0 z-0 bg-black/40" />
+                </>
+            )}
+
             {/* Header */}
-            {(showImage || showTitle) && (
+            {(showTitle || (imageStyle === 'avatar' && showImage)) && (
                 <div className="mb-6 text-center md:text-left flex items-center gap-6 opacity-90 relative z-10">
-                    {showImage && personImage && (
+                    {imageStyle === 'avatar' && showImage && personImage && (
                         <img
                             src={personImage}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-violet-500/50 block"
+                            className="w-16 h-16 rounded-full object-cover border-2 border-violet-500/50 block shadow-lg"
                             alt="Avatar"
                         />
                     )}

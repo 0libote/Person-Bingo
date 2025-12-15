@@ -17,7 +17,10 @@ const App = () => {
     instantWin: '',
     personImage: null,
     showTitle: true,
-    showImage: true
+    showImage: true,
+    imageStyle: 'avatar', // 'avatar' | 'background'
+    themeName: 'cyber',
+    customColors: { start: '#8b5cf6', end: '#ec4899' }
   }]);
   const [activeCardId, setActiveCardId] = useState(1);
   const [isSetupMode, setIsSetupMode] = useState(true);
@@ -26,8 +29,6 @@ const App = () => {
 
   // App-wide View State
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [themeName, setThemeName] = useState('cyber');
-  const [customColors, setCustomColors] = useState({ start: '#8b5cf6', end: '#ec4899' });
   const [showSettings, setShowSettings] = useState(false);
   const cardRef = useRef(null);
 
@@ -35,7 +36,7 @@ const App = () => {
 
   // --- PERSISTENCE ---
   useEffect(() => {
-    const saved = localStorage.getItem('person-bingo-data-v2');
+    const saved = localStorage.getItem('person-bingo-data-v3');
     if (saved) {
       try {
         const data = JSON.parse(saved);
@@ -43,40 +44,16 @@ const App = () => {
         setActiveCardId(data.activeCardId || 1);
         setIsSetupMode(data.isSetupMode ?? true);
         setZoomLevel(data.zoomLevel || 1);
-        setThemeName(data.themeName || 'cyber');
-        if (data.customColors) setCustomColors(data.customColors);
       } catch (e) {
         console.error("Failed to load saved data", e);
-      }
-    } else {
-      // Migration from v1
-      const legacy = localStorage.getItem('person-bingo-data');
-      if (legacy) {
-        try {
-          const data = JSON.parse(legacy);
-          setCards([{
-            id: 1,
-            name: data.cardName || 'My Bingo Card',
-            gridSize: data.gridSize || 3,
-            items: data.items || Array(9).fill(''),
-            markedSquares: data.markedSquares || Array(9).fill(false),
-            instantWin: data.instantWin || '',
-            personImage: data.personImage || null,
-            showTitle: true,
-            showImage: true
-          }]);
-          setActiveCardId(1);
-          setIsSetupMode(data.isSetupMode ?? true);
-          setZoomLevel(data.zoomLevel || 1);
-        } catch (e) { console.error("Migration failed", e); }
       }
     }
   }, []);
 
   useEffect(() => {
-    const data = { cards, activeCardId, isSetupMode, zoomLevel, themeName, customColors };
-    localStorage.setItem('person-bingo-data-v2', JSON.stringify(data));
-  }, [cards, activeCardId, isSetupMode, zoomLevel, themeName, customColors]);
+    const data = { cards, activeCardId, isSetupMode, zoomLevel };
+    localStorage.setItem('person-bingo-data-v3', JSON.stringify(data));
+  }, [cards, activeCardId, isSetupMode, zoomLevel]);
 
   // --- CARD HELPERS ---
   const updateActiveCard = (updates) => {
@@ -94,9 +71,13 @@ const App = () => {
       instantWin: '',
       personImage: null,
       showTitle: true,
-      showImage: true
+      showImage: true,
+      imageStyle: 'avatar',
+      themeName: 'cyber',
+      customColors: { start: '#8b5cf6', end: '#ec4899' }
     }]);
     setActiveCardId(newId);
+    setIsSetupMode(true); // Force setup mode
   };
 
   const handleDeleteCard = (id) => {
@@ -223,35 +204,10 @@ const App = () => {
   };
 
   // --- THEME ---
-  // --- THEME ---
-  const getTheme = () => {
+  const getTheme = (themeName) => {
     switch (themeName) {
-      case 'classic': return {
-        appBg: 'bg-amber-50',
-        textMain: 'text-slate-800',
-        cardBg: 'bg-white',
-        cardBorder: 'border-slate-200',
-        squareUnmarked: 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100',
-        squareMarked: 'bg-red-500 border-red-600 text-white shadow-red-500/30',
-        squareEmpty: 'bg-slate-100/50 border-transparent text-slate-300',
-        inputBg: 'bg-white',
-        inputBorder: 'border-slate-300',
-        titleClass: 'text-slate-900'
-      };
-      case 'clean': return {
-        appBg: 'bg-slate-50',
-        textMain: 'text-slate-900',
-        cardBg: 'bg-white',
-        cardBorder: 'border-slate-200',
-        squareUnmarked: 'bg-slate-50 border-slate-200 text-slate-600 hover:border-blue-400',
-        squareMarked: 'bg-sky-500 border-sky-600 text-white shadow-sky-500/30',
-        squareEmpty: 'bg-slate-50 border-transparent text-slate-300',
-        inputBg: 'bg-white',
-        inputBorder: 'border-slate-200',
-        titleClass: 'text-slate-900'
-      };
       case 'dark': return {
-        appBg: 'bg-black',
+        appBg: 'bg-black', // App background is static dark now
         textMain: 'text-white',
         cardBg: 'bg-zinc-900',
         cardBorder: 'border-zinc-800',
@@ -289,33 +245,29 @@ const App = () => {
         };
     }
   };
-  const theme = getTheme();
 
-  const customStyle = themeName === 'custom' ? {
-    '--theme-gradient-start': customColors.start,
-    '--theme-gradient-end': customColors.end
+  // Get theme based on ACTIVE CARD, not global
+  // Default to 'cyber' if undefined (legacy cards)
+  const currentThemeName = activeCard.themeName || 'cyber';
+  const theme = getTheme(currentThemeName);
+
+  const customStyle = currentThemeName === 'custom' ? {
+    '--theme-gradient-start': activeCard.customColors?.start || '#8b5cf6',
+    '--theme-gradient-end': activeCard.customColors?.end || '#ec4899'
   } : {};
 
   return (
     <div
-      className={`min-h-screen ${theme.appBg} ${theme.textMain} font-sans selection:bg-violet-500/30 overflow-x-hidden transition-colors duration-500`}
+      className={`min-h-screen bg-zinc-950 text-white font-sans selection:bg-violet-500/30 overflow-x-hidden transition-colors duration-500`}
       style={customStyle}
     >
-
-      {/* Background Ambience (Only for Cyber/Dark/Custom themes) */}
-      {(themeName === 'cyber' || themeName === 'dark' || themeName === 'custom') && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className={`absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full blur-[150px] opacity-20 animate-float ${themeName === 'cyber' ? 'bg-violet-900/40' : (themeName === 'custom' ? 'bg-[var(--theme-gradient-start)] opacity-10' : 'bg-white/5')}`} />
-          <div className={`absolute top-[40%] -right-[10%] w-[50%] h-[50%] rounded-full blur-[130px] opacity-20 animate-pulse-slow ${themeName === 'cyber' ? 'bg-fuchsia-900/40' : (themeName === 'custom' ? 'bg-[var(--theme-gradient-end)] opacity-10' : 'bg-white/5')}`} />
-        </div>
-      )}
 
       <div className="relative z-10 min-h-screen flex flex-col items-center p-6">
 
         {/* HEADER */}
         <header className="w-full max-w-5xl flex flex-col items-center mb-8 gap-6">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight opacity-90">
-            Person Bingo
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight opacity-90 text-center">
+            {activeCard.name || 'Person Bingo'}
           </h1>
 
           <CardSwitcher
@@ -338,10 +290,23 @@ const App = () => {
 
             <div className="h-6 w-px bg-white/10 mx-1"></div>
 
-            <label className="p-2 hover:bg-white/10 rounded-lg cursor-pointer transition-colors" title="Upload Image">
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            </label>
+            {/* Edit Button for Play Mode */}
+            {!isSetupMode && (
+              <button
+                onClick={() => setIsSetupMode(true)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-current"
+                title="Edit Card"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+              </button>
+            )}
+
+            {isSetupMode && (
+              <label className="p-2 hover:bg-white/10 rounded-lg cursor-pointer transition-colors" title="Upload Image">
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </label>
+            )}
 
             {!isSetupMode && (
               <>
@@ -360,7 +325,7 @@ const App = () => {
               onClick={() => setIsSetupMode(!isSetupMode)}
               className={`ml-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${isSetupMode ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
             >
-              {isSetupMode ? 'Play Game' : 'Edit Board'}
+              {isSetupMode ? 'Play' : 'Setup'}
             </button>
           </div>
         </header>
@@ -369,14 +334,14 @@ const App = () => {
           /* --- EDIT MODE --- */
           <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
             {/* Config Panel */}
-            <div className={`lg:col-span-1 p-6 rounded-3xl ${theme.cardBg} border ${theme.cardBorder} backdrop-blur-xl h-fit`}>
+            <div className={`lg:col-span-1 p-6 rounded-3xl bg-zinc-900 border border-zinc-800 backdrop-blur-xl h-fit`}>
               <h2 className="text-xl font-bold mb-6">Card Settings</h2>
               <div className="space-y-5">
                 <div>
                   <label className="text-xs font-bold opacity-60 uppercase tracking-wider mb-2 block">Card Title</label>
                   <input
                     type="text" value={activeCard.name} onChange={(e) => updateActiveCard({ name: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all bg-zinc-950 border-zinc-800 focus:border-violet-500`}
                     placeholder="Name..."
                   />
                 </div>
@@ -394,7 +359,7 @@ const App = () => {
                   <label className="text-xs font-bold opacity-60 uppercase tracking-wider mb-2 block">Instant Win Condition</label>
                   <textarea
                     value={activeCard.instantWin} onChange={(e) => updateActiveCard({ instantWin: e.target.value })} rows={3}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all resize-none ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none transition-all resize-none bg-zinc-950 border-zinc-800 focus:border-violet-500`}
                     placeholder="E.g. They spill coffee..."
                   />
                 </div>
@@ -411,7 +376,7 @@ const App = () => {
                     <button
                       onClick={() => {
                         if (confirm('Clear Everything?')) {
-                          updateActiveCard({ items: Array(activeCard.gridSize * activeCard.gridSize).fill(''), name: '', instantWin: '', personImage: null });
+                          updateActiveCard({ items: Array(activeCard.gridSize * activeCard.gridSize).fill(''), name: 'My Bingo Card', instantWin: '', personImage: null });
                         }
                       }}
                       className="px-4 py-2 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 text-rose-400 text-sm font-medium transition-colors"
@@ -435,7 +400,7 @@ const App = () => {
                       className={`
                                          w-full h-full p-2 pt-6 rounded-xl border outline-none transition-all resize-none text-center flex items-center justify-center 
                                          text-sm md:text-base leading-tight 
-                                         ${theme.inputBg} ${theme.inputBorder} focus:border-violet-500 focus:ring-1 focus:ring-violet-500
+                                         bg-zinc-900 border-zinc-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500
                                      `}
                       placeholder="..."
                     />
@@ -468,7 +433,7 @@ const App = () => {
             )}
 
             <div className="mt-8 opacity-50 hover:opacity-100 transition-opacity">
-              <button onClick={() => setShowResetConfirm(true)} className="text-sm underline">Reset Markers</button>
+              <button onClick={() => setShowResetConfirm(true)} className="text-sm underline">Clear Bingo Card</button>
             </div>
           </div>
         )}
@@ -480,19 +445,23 @@ const App = () => {
         onClose={() => setShowSettings(false)}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
-        themeName={themeName}
-        setThemeName={setThemeName}
-        cardOptions={{ showTitle: activeCard.showTitle, showImage: activeCard.showImage }}
+        themeName={currentThemeName}
+        setThemeName={(name) => updateActiveCard({ themeName: name })}
+        cardOptions={{
+          showTitle: activeCard.showTitle,
+          showImage: activeCard.showImage,
+          imageStyle: activeCard.imageStyle // Pass new prop
+        }}
         setCardOptions={(opts) => updateActiveCard(opts)}
-        customColors={customColors}
-        setCustomColors={setCustomColors}
+        customColors={activeCard.customColors || { start: '#8b5cf6', end: '#ec4899' }}
+        setCustomColors={(colors) => updateActiveCard({ customColors: colors })}
       />
 
       {/* Reset Confirm Modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-2">Reset Markers?</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Clear Bingo Card?</h3>
             <p className="text-zinc-400 mb-6">This will uncheck all boxes on the current card.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowResetConfirm(false)} className="px-4 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800">Cancel</button>

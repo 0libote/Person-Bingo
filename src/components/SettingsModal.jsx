@@ -1,4 +1,5 @@
 import React from 'react';
+/* eslint-disable react/prop-types */
 
 const SettingsModal = ({
     show, onClose,
@@ -11,8 +12,6 @@ const SettingsModal = ({
 
     const themes = [
         { id: 'cyber', name: 'Cyber Punk' },
-        { id: 'classic', name: 'Classic Paper' },
-        { id: 'clean', name: 'Clean Light' },
         { id: 'dark', name: 'Dark Minimal' },
         { id: 'custom', name: 'Custom Gradient' }
     ];
@@ -124,10 +123,26 @@ const SettingsModal = ({
                         </div>
                     )}
 
-                    {/* Layout Options */}
+                    {/* Layout & Image Options */}
                     <div>
                         <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Card Layout</label>
                         <div className="space-y-2">
+                            {/* Image Style Selector */}
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                <button
+                                    onClick={() => setCardOptions({ ...cardOptions, imageStyle: 'avatar' })}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${cardOptions.imageStyle !== 'background' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}
+                                >
+                                    Avatar
+                                </button>
+                                <button
+                                    onClick={() => setCardOptions({ ...cardOptions, imageStyle: 'background' })}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${cardOptions.imageStyle === 'background' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}
+                                >
+                                    Background
+                                </button>
+                            </div>
+
                             <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/50 border border-zinc-700/50 cursor-pointer hover:bg-zinc-950 transition-colors">
                                 <input
                                     type="checkbox"
@@ -137,15 +152,18 @@ const SettingsModal = ({
                                 />
                                 <span className="text-sm font-medium text-zinc-300">Show Title</span>
                             </label>
-                            <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/50 border border-zinc-700/50 cursor-pointer hover:bg-zinc-950 transition-colors">
-                                <input
-                                    type="checkbox"
-                                    checked={cardOptions.showImage}
-                                    onChange={(e) => setCardOptions({ ...cardOptions, showImage: e.target.checked })}
-                                    className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-800 w-4 h-4"
-                                />
-                                <span className="text-sm font-medium text-zinc-300">Show Avatar</span>
-                            </label>
+
+                            {cardOptions.imageStyle !== 'background' && (
+                                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/50 border border-zinc-700/50 cursor-pointer hover:bg-zinc-950 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={cardOptions.showImage}
+                                        onChange={(e) => setCardOptions({ ...cardOptions, showImage: e.target.checked })}
+                                        className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-800 w-4 h-4"
+                                    />
+                                    <span className="text-sm font-medium text-zinc-300">Show Avatar</span>
+                                </label>
+                            )}
                         </div>
                     </div>
                 </div>
