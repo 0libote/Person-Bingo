@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   body {
@@ -76,7 +74,6 @@
   animation: slide-up 0.5s ease-out forwards;
 }
 
-/* Use simple class for slide-up as well */
 .slide-up-animation {
   animation: slide-up 0.5s ease-out forwards;
 }
