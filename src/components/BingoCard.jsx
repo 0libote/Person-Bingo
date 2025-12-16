@@ -3,7 +3,6 @@ import React, { forwardRef } from 'react';
 const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSquares, children }, ref) => {
     const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar' } = card;
 
-    // Font size calculator (moved from App.jsx)
     const getTextSizeClass = (text) => {
         if (!text) return 'text-xs md:text-sm';
         const len = text.length;
@@ -16,39 +15,43 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
     return (
         <div
             ref={ref}
-            className={`relative w-full max-w-[600px] p-8 md:p-12 rounded-[2.5rem] ${theme.cardBg} border ${theme.cardBorder} shadow-2xl backdrop-blur-3xl transition-transform duration-200 ease-out overflow-hidden`}
+            className={`relative w-full max-w-[600px] p-8 md:p-12 rounded-[2.5rem] ${theme.cardBg} border ${theme.cardBorder} shadow-2xl backdrop-blur-3xl transition-all duration-300 ease-out overflow-hidden`}
             style={{
                 transform: `scale(${zoomLevel})`,
-                transformOrigin: 'top center'
+                transformOrigin: 'top center',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }}
         >
             {/* Background Image Rendering */}
             {imageStyle === 'background' && personImage && (
                 <>
                     <div
-                        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 blur-sm"
+                        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 blur-sm mix-blend-overlay"
                         style={{ backgroundImage: `url(${personImage})` }}
                     />
                     <div
                         className="absolute inset-0 z-0 bg-cover bg-center opacity-20"
                         style={{ backgroundImage: `url(${personImage})` }}
                     />
-                    <div className="absolute inset-0 z-0 bg-black/40" />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/0 via-black/20 to-black/60" />
                 </>
             )}
 
             {/* Header */}
             {(showTitle || (imageStyle === 'avatar' && showImage)) && (
-                <div className="mb-6 text-center md:text-left flex items-center gap-6 opacity-90 relative z-10">
+                <div className="mb-6 text-center md:text-left flex flex-col md:flex-row items-center gap-4 md:gap-6 opacity-90 relative z-10">
                     {imageStyle === 'avatar' && showImage && personImage && (
-                        <img
-                            src={personImage}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-violet-500/50 block shadow-lg"
-                            alt="Avatar"
-                        />
+                        <div className="relative">
+                            <img
+                                src={personImage}
+                                className="w-16 h-16 rounded-2xl object-cover border border-white/20 shadow-lg"
+                                alt="Avatar"
+                            />
+                            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10"></div>
+                        </div>
                     )}
                     {showTitle && (
-                        <h2 className="text-3xl font-bold text-white tracking-tight leading-none">
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none drop-shadow-md">
                             {cardName}
                         </h2>
                     )}
@@ -57,7 +60,7 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
 
             {/* Grid */}
             <div
-                className="grid gap-4 md:gap-5 relative z-10"
+                className="grid gap-3 md:gap-4 relative z-10"
                 style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
             >
                 {items.map((item, index) => (
@@ -65,38 +68,38 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
                         key={index}
                         onClick={() => toggleSquare(index)}
                         className={`
-              aspect-square relative rounded-2xl transition-all duration-300 flex items-center justify-center p-2 text-center group
-              ${!item?.trim() ? theme.squareEmpty : (markedSquares[index] ? theme.squareMarked : theme.squareUnmarked)}
+              aspect-square relative rounded-xl transition-all duration-200 flex items-center justify-center p-2 text-center group cursor-pointer
+              ${!item?.trim() ? theme.squareEmpty : (markedSquares[index] ? `${theme.squareMarked} scale-[0.98]` : `${theme.squareUnmarked} hover:scale-105 active:scale-95`)}
               ${getTextSizeClass(item)}
-              font-semibold select-none shadow-md
+              font-bold select-none
             `}
                     >
                         {markedSquares[index] && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 animate-scale-in">
-                                <svg className="w-3/4 h-3/4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg>
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-scale-in">
+                                <svg className="w-3/4 h-3/4 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                             </div>
                         )}
-                        <span className={markedSquares[index] ? 'opacity-100' : 'opacity-90'}>{item}</span>
+                        <span className={`relative z-10 transition-opacity ${markedSquares[index] ? 'opacity-0' : 'opacity-90'}`}>{item}</span>
                     </div>
                 ))}
             </div>
 
             {/* Instant Win */}
             {instantWin && (
-                <div className="mt-8 pt-6 border-t border-zinc-800 relative z-10">
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-900/10 border border-amber-900/30">
-                        <span className="text-xl">🌟</span>
+                <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+                    <div className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+                        <span className="text-2xl filter drop-shadow hover:scale-110 transition-transform cursor-help">🌟</span>
                         <div>
-                            <h3 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Instant Win</h3>
-                            <p className="text-amber-200 font-medium text-sm">{instantWin}</p>
+                            <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1 opacity-80">Instant Win</h3>
+                            <p className="text-amber-100 font-medium text-sm leading-snug">{instantWin}</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Watermark/Footer (Optional for polished look) */}
-            <div className="mt-4 text-center opacity-30 text-[10px] tracking-widest font-mono uppercase text-white/50">
-                Person Bingo
+            {/* Watermark/Footer */}
+            <div className="absolute bottom-4 left-0 right-0 text-center opacity-10 text-[9px] tracking-[0.3em] font-black uppercase text-white pointer-events-none">
+                Bingo
             </div>
 
             {children}
@@ -107,3 +110,4 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
 BingoCard.displayName = 'BingoCard';
 
 export default BingoCard;
+

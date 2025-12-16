@@ -21,17 +21,18 @@ const SettingsModal = ({
         { name: 'Ocean', start: '#06b6d4', end: '#3b82f6' },
         { name: 'Forest', start: '#10b981', end: '#047857' },
         { name: 'Royal', start: '#8b5cf6', end: '#d946ef' },
+        { name: 'Midnight', start: '#1e1b4b', end: '#4c1d95' },
     ];
 
     const zoomOptions = [0.5, 0.75, 1.0, 1.25, 1.5];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-zinc-900 border border-zinc-800 p-6 md:p-8 rounded-2xl max-w-md w-full shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+            <div className="glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full relative overflow-hidden slide-up-animation">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
+                    className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -45,28 +46,30 @@ const SettingsModal = ({
                     {/* Zoom Control */}
                     <div>
                         <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Card Scale</label>
-                        <select
-                            value={zoomLevel}
-                            onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                            className="w-full px-4 py-3 rounded-xl border outline-none transition-all bg-zinc-950 border-zinc-700 text-white focus:border-violet-500 appearance-none cursor-pointer"
-                        >
+                        <div className="flex gap-2 bg-black/20 p-1 rounded-xl">
                             {zoomOptions.map(zoom => (
-                                <option key={zoom} value={zoom}>{Math.round(zoom * 100)}%</option>
+                                <button
+                                    key={zoom}
+                                    onClick={() => setZoomLevel(zoom)}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${zoomLevel === zoom ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    {Math.round(zoom * 100)}%
+                                </button>
                             ))}
-                        </select>
+                        </div>
                     </div>
 
                     {/* Theme Selector */}
                     <div>
                         <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Theme</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             {themes.map(t => (
                                 <button
                                     key={t.id}
                                     onClick={() => setThemeName(t.id)}
                                     className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${themeName === t.id
                                         ? 'bg-violet-600 border-violet-500 text-white'
-                                        : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-750 hover:text-white'
+                                        : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white'
                                         }`}
                                 >
                                     {t.name}
@@ -77,13 +80,13 @@ const SettingsModal = ({
 
                     {/* Custom Color Pickers */}
                     {themeName === 'custom' && (
-                        <div className="mt-4 p-4 rounded-xl bg-zinc-950/50 border border-zinc-700/50 space-y-4 animate-fade-in">
+                        <div className="p-4 rounded-2xl bg-black/20 border border-white/5 space-y-4 animate-fade-in">
                             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-700">
                                 {presets.map(p => (
                                     <button
                                         key={p.name}
                                         onClick={() => setCustomColors({ start: p.start, end: p.end })}
-                                        className="px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-700 hover:border-zinc-500 whitespace-nowrap text-zinc-300"
+                                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-white/10 hover:border-white/30 whitespace-nowrap text-zinc-300 transition-colors"
                                         style={{ background: `linear-gradient(to right, ${p.start}22, ${p.end}22)` }}
                                     >
                                         {p.name}
@@ -94,24 +97,28 @@ const SettingsModal = ({
                                 <div>
                                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Start Color</label>
                                     <div className="flex items-center gap-3">
-                                        <input
-                                            type="color"
-                                            value={customColors.start}
-                                            onChange={(e) => setCustomColors({ ...customColors, start: e.target.value })}
-                                            className="w-10 h-10 rounded-lg p-0 border-0 cursor-pointer"
-                                        />
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 relative">
+                                            <input
+                                                type="color"
+                                                value={customColors.start}
+                                                onChange={(e) => setCustomColors({ ...customColors, start: e.target.value })}
+                                                className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 m-0 cursor-pointer"
+                                            />
+                                        </div>
                                         <span className="text-xs font-mono text-zinc-400">{customColors.start}</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">End Color</label>
                                     <div className="flex items-center gap-3">
-                                        <input
-                                            type="color"
-                                            value={customColors.end}
-                                            onChange={(e) => setCustomColors({ ...customColors, end: e.target.value })}
-                                            className="w-10 h-10 rounded-lg p-0 border-0 cursor-pointer"
-                                        />
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 relative">
+                                            <input
+                                                type="color"
+                                                value={customColors.end}
+                                                onChange={(e) => setCustomColors({ ...customColors, end: e.target.value })}
+                                                className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 m-0 cursor-pointer"
+                                            />
+                                        </div>
                                         <span className="text-xs font-mono text-zinc-400">{customColors.end}</span>
                                     </div>
                                 </div>
@@ -125,36 +132,35 @@ const SettingsModal = ({
 
                     {/* Layout & Image Options */}
                     <div>
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Card Layout</label>
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Display</label>
                         <div className="space-y-2">
-                            {/* Image Style Selector */}
-                            <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div className="grid grid-cols-2 gap-2 mb-2 p-1 bg-black/20 rounded-xl">
                                 <button
                                     onClick={() => setCardOptions({ ...cardOptions, imageStyle: 'avatar' })}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${cardOptions.imageStyle !== 'background' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${cardOptions.imageStyle !== 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500'}`}
                                 >
-                                    Avatar
+                                    Avatar Mode
                                 </button>
                                 <button
                                     onClick={() => setCardOptions({ ...cardOptions, imageStyle: 'background' })}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${cardOptions.imageStyle === 'background' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${cardOptions.imageStyle === 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500'}`}
                                 >
-                                    Background
+                                    Bg Mode
                                 </button>
                             </div>
 
-                            <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/50 border border-zinc-700/50 cursor-pointer hover:bg-zinc-950 transition-colors">
+                            <label className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
                                 <input
                                     type="checkbox"
                                     checked={cardOptions.showTitle}
                                     onChange={(e) => setCardOptions({ ...cardOptions, showTitle: e.target.checked })}
                                     className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-800 w-4 h-4"
                                 />
-                                <span className="text-sm font-medium text-zinc-300">Show Title</span>
+                                <span className="text-sm font-medium text-zinc-300">Show Card Title</span>
                             </label>
 
                             {cardOptions.imageStyle !== 'background' && (
-                                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/50 border border-zinc-700/50 cursor-pointer hover:bg-zinc-950 transition-colors">
+                                <label className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
                                     <input
                                         type="checkbox"
                                         checked={cardOptions.showImage}
@@ -173,3 +179,4 @@ const SettingsModal = ({
 };
 
 export default SettingsModal;
+
