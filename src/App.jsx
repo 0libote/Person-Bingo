@@ -6,6 +6,8 @@ import BingoCard from './components/BingoCard';
 import SettingsModal from './components/SettingsModal';
 import CardSwitcher from './components/CardSwitcher';
 import GridItem from './components/GridItem';
+import ActionsMenu from './components/ActionsMenu';
+import ShareModal from './components/ShareModal';
 
 const App = () => {
   // --- STATE ---
@@ -33,6 +35,9 @@ const App = () => {
   // App-wide View State
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [showClearDataConfirm, setShowClearDataConfirm] = useState(false);
   const cardRef = useRef(null);
 
   const activeCard = cards.find(c => c.id === activeCardId) || cards[0];
@@ -148,6 +153,10 @@ const App = () => {
 
   const toggleMode = () => {
     if (isSetupMode) {
+      if (isDirty) {
+        setShowUnsavedWarning(true);
+        return;
+      }
       // Validate: correct number of items filled?
       const filledCount = activeCard.items.filter(i => i.trim() !== '').length;
       if (filledCount < activeCard.items.length) {
@@ -156,6 +165,11 @@ const App = () => {
       }
     }
     setIsSetupMode(!isSetupMode);
+  };
+
+  const handleClearAllData = () => {
+    localStorage.removeItem('person-bingo-data-v3');
+    window.location.reload();
   };
 
   // --- RENDERING EMPTY STATE ---
@@ -347,28 +361,26 @@ const App = () => {
 
           {/* Right: Actions */}
           <div className="pointer-events-auto flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
-            {!isSetupMode && (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-rose-400 hover:text-rose-300"
-                title="Restart Card"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              </button>
-            )}
+            <ActionsMenu
+              onShare={() => setShowShareModal(true)}
+              onRestart={() => setShowResetConfirm(true)}
+            />
 
-            <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Settings">
+            <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/10 rounded-xl transition-colors cursor-pointer" title="Settings">
               <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </button>
 
-            <div className="h-6 w-px bg-white/10 mx-1"></div>
-
-            <button
-              onClick={toggleMode}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${isSetupMode ? 'bg-violet-600 text-white shadow-violet-500/25 ring-2 ring-violet-500/50' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
-            >
-              {isSetupMode ? 'Play' : 'Edit'}
-            </button>
+            {!isSetupMode && (
+              <>
+                <div className="h-6 w-px bg-white/10 mx-1"></div>
+                <button
+                  onClick={toggleMode}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer`}
+                >
+                  Edit
+                </button>
+              </>
+            )}
           </div>
         </header>
 
@@ -436,29 +448,30 @@ const App = () => {
                   />
                 </div>
 
-                {/* Save / Revert Controls */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={!isDirty}
-                    className={`flex-1 py-2 rounded-xl font-bold transition-all ${isDirty ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-900/20' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleRevert}
-                    disabled={!isDirty}
-                    className={`flex-1 py-2 rounded-xl font-bold transition-all ${isDirty ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
-                  >
-                    Revert
-                  </button>
-                </div>
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => updateDraft({ items: Array(draftCard.gridSize * draftCard.gridSize).fill('') })}
+                      className="btn-secondary text-xs cursor-pointer">Clear Grid</button>
+                    <button onClick={() => setShowResetConfirm(true)}
+                      className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/20 hover:border-rose-900/30 cursor-pointer">Delete Card</button>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
-                  <button onClick={() => updateDraft({ items: Array(draftCard.gridSize * draftCard.gridSize).fill('') })}
-                    className="btn-secondary text-xs">Clear Grid</button>
-                  <button onClick={() => setShowResetConfirm(true)}
-                    className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/20 hover:border-rose-900/30">Delete Card</button>
+                  {/* Save / Play Controls */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={!isDirty}
+                      className={`flex-1 py-3 rounded-xl font-bold transition-all cursor-pointer ${isDirty ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-900/20' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={toggleMode}
+                      className={`flex-1 py-3 rounded-xl font-bold transition-all shadow-lg bg-violet-600 text-white hover:scale-105 cursor-pointer`}
+                    >
+                      Play
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -476,7 +489,7 @@ const App = () => {
                       }}
                       className={`
                          aspect-square w-full p-2 rounded-xl border outline-none transition-all
-                         flex items-center justify-center text-center
+                         flex items-center justify-start pl-4 text-left
                          text-sm md:text-base leading-tight
                          bg-zinc-900/80 border-white/5 focus-within:border-violet-500 focus-within:bg-zinc-900 focus-within:ring-4 focus-within:ring-violet-500/10
                      `}
@@ -510,13 +523,65 @@ const App = () => {
           }
           setCardOptions={(opts) => isSetupMode && draftCard ? updateDraft(opts) : updateActiveCard(opts)}
           actions={{
-            onReset: () => { setShowSettings(false); setShowResetConfirm(true); },
-            onDownload: () => { setShowSettings(false); downloadCardImage(); },
-            onCopy: () => { setShowSettings(false); copyCardImage(); }
+            onClearAllData: () => { setShowSettings(false); setShowClearDataConfirm(true); }
           }}
         />
 
-        {/* Reset Confirm Modal */}
+        <ShareModal
+          show={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onDownload={downloadCardImage}
+          onCopy={copyCardImage}
+          cardConfig={activeCard}
+        />
+
+        {/* Unsaved Changes Warning */}
+        {showUnsavedWarning && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl slide-up-animation">
+              <h3 className="text-xl font-bold text-white mb-2">Unsaved Changes</h3>
+              <p className="text-zinc-400 mb-6 text-sm">You have unsaved changes in your draft. Playing will discard these changes.</p>
+              <div className="flex flex-col gap-3">
+                <button onClick={() => {
+                  handleRevert();
+                  setShowUnsavedWarning(false);
+                  // Validate saved data before playing
+                  const filledCount = activeCard.items.filter(i => i.trim() !== '').length;
+                  if (filledCount < activeCard.items.length) {
+                    alert(`Please save a complete card before playing!`);
+                    return;
+                  }
+                  setIsSetupMode(false);
+                }}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-colors cursor-pointer">
+                  Discard & Play
+                </button>
+                <button onClick={() => setShowUnsavedWarning(false)} className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Clear Data Confirm Modal */}
+        {showClearDataConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl">
+              <h3 className="text-lg font-bold text-white mb-2 text-rose-500">Reset App Data?</h3>
+              <p className="text-zinc-400 mb-6 text-sm">This will permanently delete ALL your bingo cards and settings. This cannot be undone.</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowClearDataConfirm(false)} className="btn-secondary">Cancel</button>
+                <button onClick={handleClearAllData}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold">
+                  Yes, Delete Everything
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Confirm Modal (Clear Board) */}
         {showResetConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl">
