@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 
 const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSquares, children }, ref) => {
-    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar', customColors } = card;
+    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar' } = card;
 
     const getTextSizeClass = (text) => {
         if (!text) return 'text-xs md:text-sm';
@@ -73,7 +73,6 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
               ${getTextSizeClass(item)}
               font-bold select-none
             `}
-                        style={markedSquares[index] && customColors?.highlight ? { backgroundColor: customColors.highlight, borderColor: customColors.highlight } : {}}
                     >
                         {/* Corner check badge indicator for marked squares */}
                         {markedSquares[index] && (

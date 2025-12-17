@@ -74,19 +74,20 @@ const App = () => {
       personImage: null,
       showTitle: true,
       showImage: true,
-      imageStyle: 'avatar',
-      themeName: 'cyber',
-      customColors: { start: '#8b5cf6', end: '#ec4899' }
+      imageStyle: 'avatar'
     }]);
     setActiveCardId(newId);
     setIsSetupMode(true);
   };
 
   const handleDeleteCard = (id) => {
-    if (cards.length <= 1) return;
     const newCards = cards.filter(c => c.id !== id);
     setCards(newCards);
-    if (activeCardId === id) setActiveCardId(newCards[0].id);
+    if (newCards.length > 0) {
+      if (activeCardId === id) setActiveCardId(newCards[0].id);
+    } else {
+      setActiveCardId(null);
+    }
   };
 
   const updateGridSize = (newSize) => {
@@ -104,24 +105,41 @@ const App = () => {
     setWinner(false);
   };
 
-  const handleShuffle = () => {
-    if (!confirm('Shuffle items? This will reset marks.')) return;
-    const items = [...activeCard.items];
-    // Fisher-Yates shuffle
-    for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    updateActiveCard({ items, markedSquares: Array(activeCard.items.length).fill(false) });
-    setWinner(false);
-  };
-
   const handleItemChange = (index, value) => {
     // No history for typing every character
     const newItems = [...activeCard.items];
     newItems[index] = value;
     updateActiveCard({ items: newItems });
   };
+
+  const toggleMode = () => {
+    if (isSetupMode) {
+      // Validate: correct number of items filled?
+      const filledCount = activeCard.items.filter(i => i.trim() !== '').length;
+      if (filledCount < activeCard.items.length) {
+        alert(`Please fill all ${activeCard.items.length} boxes before playing!`);
+        return;
+      }
+    }
+    setIsSetupMode(!isSetupMode);
+  };
+
+  // --- RENDERING EMPTY STATE ---
+  if (!activeCard && cards.length === 0) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4">
+        <h1 className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Person Bingo</h1>
+        <button
+          onClick={handleAddCard}
+          className="px-8 py-4 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white text-xl font-bold shadow-xl shadow-violet-600/20 transition-all hover:scale-105"
+        >
+          Create Bingo Card
+        </button>
+      </div>
+    );
+  }
+
+  if (!activeCard) return null; // Safety fallback
 
   // --- GAME LOGIC ---
   const checkForWin = useCallback((currentMarked, currentItems) => {
@@ -266,78 +284,58 @@ const App = () => {
   };
 
   // --- THEME & UI ---
-  const getTheme = (themeName) => {
-    switch (themeName) {
-      case 'dark': return {
-        cardBg: 'bg-zinc-900',
-        cardBorder: 'border-zinc-800',
-        squareUnmarked: 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-white/20',
-        squareMarked: 'bg-white text-black border-white shadow-white/20',
-        squareEmpty: 'bg-zinc-900/50 border-transparent text-zinc-800',
-      };
-      case 'custom': return {
-        cardBg: 'bg-zinc-900/80',
-        cardBorder: 'border-zinc-800',
-        squareUnmarked: 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-white/20',
-        squareMarked: 'text-white shadow-xl border-white/20 bg-[linear-gradient(135deg,var(--theme-gradient-start),var(--theme-gradient-end))]',
-        squareEmpty: 'bg-zinc-950 border-zinc-900 text-zinc-700 opacity-50',
-      };
-      default: // cyber
-        return {
-          cardBg: 'bg-zinc-900/50',
-          cardBorder: 'border-zinc-800',
-          squareUnmarked: 'bg-zinc-900/50 border-white/5 text-zinc-300 hover:border-violet-500/50 hover:bg-violet-500/10',
-          squareMarked: 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/40',
-          squareEmpty: 'bg-transparent border-white/5 text-zinc-700/50',
-        };
-    }
+  // --- THEME & UI ---
+  // Hardcoded Green Theme as requested
+  const theme = {
+    cardBg: 'bg-zinc-900/50',
+    cardBorder: 'border-zinc-800',
+    squareUnmarked: 'bg-zinc-900/50 border-white/5 text-zinc-300 hover:border-emerald-500/50 hover:bg-emerald-500/10',
+    squareMarked: 'bg-emerald-600/20 border-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]',
+    squareEmpty: 'bg-transparent border-white/5 text-zinc-700/50',
   };
 
-  const currentThemeName = activeCard.themeName || 'cyber';
-  const theme = getTheme(currentThemeName);
-  const customStyle = currentThemeName === 'custom' ? {
-    '--theme-gradient-start': activeCard.customColors?.start || '#8b5cf6',
-    '--theme-gradient-end': activeCard.customColors?.end || '#ec4899'
-  } : {};
+  const customStyle = {};
 
   return (
     <div className={`min-h-screen text-white overflow-x-hidden`} style={customStyle}>
       <div className="relative z-10 min-h-screen flex flex-col items-center p-4 md:p-8">
 
         {/* HEADER TOOLBAR */}
-        <header className="fixed top-4 md:top-6 z-50 p-2 rounded-2xl glass-panel animate-slide-up bg-black/50 backdrop-blur-md border-white/10 flex items-center gap-3">
-          <h1 className="hidden md:block text-sm font-bold pl-3 pr-2 opacity-80 uppercase tracking-widest">{activeCard.name}</h1>
+        {/* HEADER TOOLBAR */}
+        <header className="fixed top-4 md:top-6 z-50 w-full max-w-7xl mx-auto flex items-center justify-between px-4 pointer-events-none">
+          {/* Left: Card Switcher (Acts as Title) */}
+          <div className="pointer-events-auto flex items-center gap-4 bg-black/40 backdrop-blur-md p-2 pl-4 pr-3 rounded-2xl border border-white/10">
+            <CardSwitcher
+              cards={cards} activeCardId={activeCardId}
+              onSwitch={setActiveCardId} onAdd={handleAddCard} onDelete={handleDeleteCard}
+            />
+          </div>
 
-          <div className="h-6 w-px bg-white/10 mx-1 hidden md:block"></div>
-
-          <CardSwitcher
-            cards={cards} activeCardId={activeCardId}
-            onSwitch={setActiveCardId} onAdd={handleAddCard} onDelete={handleDeleteCard}
-          />
-
-          <div className="h-6 w-px bg-white/10 mx-1"></div>
-
-          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Settings">
-            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-          </button>
-
-          {!isSetupMode && (
-            <>
-              <button onClick={downloadCardImage} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Download Image">
-                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          {/* Right: Actions */}
+          <div className="pointer-events-auto flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+            {!isSetupMode && (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-rose-400 hover:text-rose-300"
+                title="Restart Card"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               </button>
-              <button onClick={handleShuffle} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Shuffle">
-                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              </button>
-            </>
-          )}
+            )}
 
-          <button
-            onClick={() => setIsSetupMode(!isSetupMode)}
-            className={`ml-3 px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${isSetupMode ? 'bg-violet-600 text-white shadow-violet-500/25 ring-2 ring-violet-500/50' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
-          >
-            {isSetupMode ? 'Play' : 'Edit'}
-          </button>
+            <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Settings">
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+
+            <div className="h-6 w-px bg-white/10 mx-1"></div>
+
+            <button
+              onClick={toggleMode}
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${isSetupMode ? 'bg-violet-600 text-white shadow-violet-500/25 ring-2 ring-violet-500/50' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/20'}`}
+            >
+              {isSetupMode ? 'Play' : 'Edit'}
+            </button>
+          </div>
         </header>
 
         {/* MAIN CONTENT AREA */}
@@ -398,17 +396,20 @@ const App = () => {
               <div className="lg:col-span-8">
                 <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${activeCard.gridSize}, 1fr)` }}>
                   {activeCard.items.map((item, index) => (
-                    <textarea
+                    <div
                       key={index}
-                      value={item}
-                      onChange={(e) => handleItemChange(index, e.target.value)}
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => handleItemChange(index, e.target.innerText)}
                       className={`
-                         aspect-square w-full p-2 rounded-xl border outline-none transition-all resize-none text-center flex items-center justify-center 
-                         text-sm md:text-base leading-tight placeholder-white/20
-                         bg-zinc-900/80 border-white/5 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10
+                         aspect-square w-full p-2 rounded-xl border outline-none transition-all
+                         flex items-center justify-center text-center
+                         text-sm md:text-base leading-tight
+                         bg-zinc-900/80 border-white/5 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10 cursor-text
                      `}
-                      placeholder="..."
-                    />
+                    >
+                      {item}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -432,13 +433,9 @@ const App = () => {
         <SettingsModal
           show={showSettings} onClose={() => setShowSettings(false)}
           zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          themeName={currentThemeName} setThemeName={(name) => updateActiveCard({ themeName: name })}
           cardOptions={{ showTitle: activeCard.showTitle, showImage: activeCard.showImage, imageStyle: activeCard.imageStyle }}
           setCardOptions={(opts) => updateActiveCard(opts)}
-          customColors={activeCard.customColors || { start: '#8b5cf6', end: '#ec4899' }}
-          setCustomColors={(colors) => updateActiveCard({ customColors: colors })}
           actions={{
-            onShuffle: () => { setShowSettings(false); handleShuffle(); },
             onReset: () => { setShowSettings(false); setShowResetConfirm(true); },
             onDownload: () => { setShowSettings(false); downloadCardImage(); },
             onCopy: () => { setShowSettings(false); copyCardImage(); }

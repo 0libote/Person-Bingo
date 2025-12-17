@@ -4,26 +4,10 @@ import React from 'react';
 const SettingsModal = ({
     show, onClose,
     zoomLevel, setZoomLevel,
-    themeName, setThemeName,
     cardOptions, setCardOptions,
-    customColors, setCustomColors,
-    actions // { onShuffle, onReset, onDownload, onCopy }
+    actions // { onReset, onDownload, onCopy }
 }) => {
     if (!show) return null;
-
-    const themes = [
-        { id: 'cyber', name: 'Cyber Punk' },
-        { id: 'dark', name: 'Dark Minimal' },
-        { id: 'custom', name: 'Custom Gradient' }
-    ];
-
-    const presets = [
-        { name: 'Sunset', start: '#f59e0b', end: '#ef4444' },
-        { name: 'Ocean', start: '#06b6d4', end: '#3b82f6' },
-        { name: 'Forest', start: '#10b981', end: '#047857' },
-        { name: 'Royal', start: '#8b5cf6', end: '#d946ef' },
-        { name: 'Midnight', start: '#1e1b4b', end: '#4c1d95' },
-    ];
 
     const zoomOptions = [0.5, 0.75, 1.0, 1.25, 1.5];
 
@@ -46,11 +30,7 @@ const SettingsModal = ({
                 <div className="space-y-8">
                     {/* Game Controls */}
                     <div className="grid grid-cols-2 gap-3">
-                        <button onClick={actions.onShuffle} className="col-span-1 btn-secondary flex items-center justify-center gap-2 text-sm bg-zinc-800/50">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            Shuffle
-                        </button>
-                        <button onClick={actions.onReset} className="col-span-1 btn-secondary flex items-center justify-center gap-2 text-sm text-rose-400 bg-rose-900/10 border-rose-900/30 hover:bg-rose-900/20">
+                        <button onClick={actions.onReset} className="col-span-2 btn-secondary flex items-center justify-center gap-2 text-sm text-rose-400 bg-rose-900/10 border-rose-900/30 hover:bg-rose-900/20">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             Clear Board
                         </button>
@@ -81,108 +61,6 @@ const SettingsModal = ({
                             ))}
                         </div>
                     </div>
-
-                    {/* Theme Selector */}
-                    <div>
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Theme</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {themes.map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setThemeName(t.id)}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${themeName === t.id
-                                        ? 'bg-violet-600 border-violet-500 text-white'
-                                        : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                                        }`}
-                                >
-                                    {t.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Custom Color Pickers */}
-                    {themeName === 'custom' && (
-                        <div className="p-4 rounded-2xl bg-black/20 border border-white/5 space-y-4 animate-fade-in">
-                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-700">
-                                {presets.map(p => (
-                                    <button
-                                        key={p.name}
-                                        onClick={() => setCustomColors({ ...customColors, start: p.start, end: p.end, highlight: '' })}
-                                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-white/10 hover:border-white/30 whitespace-nowrap text-zinc-300 transition-colors"
-                                        style={{ background: `linear-gradient(to right, ${p.start}22, ${p.end}22)` }}
-                                    >
-                                        {p.name}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Start Color</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 relative">
-                                            <input
-                                                type="color"
-                                                value={customColors.start}
-                                                onChange={(e) => setCustomColors({ ...customColors, start: e.target.value })}
-                                                className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 m-0 cursor-pointer"
-                                            />
-                                        </div>
-                                        <span className="text-xs font-mono text-zinc-400">{customColors.start}</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">End Color</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 relative">
-                                            <input
-                                                type="color"
-                                                value={customColors.end}
-                                                onChange={(e) => setCustomColors({ ...customColors, end: e.target.value })}
-                                                className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 m-0 cursor-pointer"
-                                            />
-                                        </div>
-                                        <span className="text-xs font-mono text-zinc-400">{customColors.end}</span>
-                                    </div>
-                                </div>
-                                <div className="col-span-2 pt-2 border-t border-white/5">
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">
-                                        Highlight Override <span className="text-zinc-600 font-normal normal-case">(Optional)</span>
-                                    </label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 relative">
-                                            <input
-                                                type="color"
-                                                value={customColors.highlight || '#ffffff'}
-                                                onChange={(e) => setCustomColors({ ...customColors, highlight: e.target.value })}
-                                                className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 m-0 cursor-pointer"
-                                            />
-                                        </div>
-                                        {customColors.highlight ? (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-mono text-zinc-400">{customColors.highlight}</span>
-                                                <button onClick={() => setCustomColors({ ...customColors, highlight: '' })} className="text-[10px] text-zinc-500 hover:text-white underline">Clear</button>
-                                            </div>
-                                        ) : (
-                                            <span className="text-xs text-zinc-600 italic">Using theme default</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Preview</p>
-                                <div
-                                    className="h-8 rounded-lg w-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg"
-                                    style={{
-                                        background: customColors.highlight || `linear-gradient(135deg, ${customColors.start}, ${customColors.end})`,
-                                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                                    }}
-                                >
-                                    MARKED TILE
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Layout & Image Options */}
                     <div>
