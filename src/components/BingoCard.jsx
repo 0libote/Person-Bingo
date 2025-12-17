@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 
 const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSquares, children }, ref) => {
-    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar' } = card;
+    const { items, gridSize, personImage, cardName, instantWin, showTitle = true, showImage = true, imageStyle = 'avatar', customColors } = card;
 
     const getTextSizeClass = (text) => {
         if (!text) return 'text-xs md:text-sm';
@@ -73,13 +73,16 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
               ${getTextSizeClass(item)}
               font-bold select-none
             `}
+                        style={markedSquares[index] && customColors?.highlight ? { backgroundColor: customColors.highlight, borderColor: customColors.highlight } : {}}
                     >
+                        {/* Corner check badge indicator for marked squares */}
                         {markedSquares[index] && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-scale-in">
-                                <svg className="w-3/4 h-3/4 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white/95 flex items-center justify-center shadow-md animate-scale-in z-20">
+                                <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                             </div>
                         )}
-                        <span className={`relative z-10 transition-opacity ${markedSquares[index] ? 'opacity-0' : 'opacity-90'}`}>{item}</span>
+                        {/* Text always visible */}
+                        <span className="relative z-10 opacity-90">{item}</span>
                     </div>
                 ))}
             </div>
