@@ -5,6 +5,7 @@ import { saveAs } from 'file-saver';
 import BingoCard from './components/BingoCard';
 import SettingsModal from './components/SettingsModal';
 import CardSwitcher from './components/CardSwitcher';
+import GridItem from './components/GridItem';
 
 const App = () => {
   // --- STATE ---
@@ -35,6 +36,39 @@ const App = () => {
   const cardRef = useRef(null);
 
   const activeCard = cards.find(c => c.id === activeCardId) || cards[0];
+
+  // --- DRAFT STATE FOR EDIT MODE ---
+  const [draftCard, setDraftCard] = useState(null);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    if (activeCard) {
+      setDraftCard(JSON.parse(JSON.stringify(activeCard)));
+      setIsDirty(false);
+    } else {
+      setDraftCard(null);
+    }
+  }, [activeCard]); // Reset draft when active card changes (switching cards)
+
+  const updateDraft = (updates) => {
+    if (!draftCard) return;
+    setDraftCard(prev => ({ ...prev, ...updates }));
+    setIsDirty(true);
+  };
+
+  const handleSave = () => {
+    if (!draftCard) return;
+    setCards(prev => prev.map(c => c.id === draftCard.id ? draftCard : c));
+    setIsDirty(false);
+    // triggerConfetti(); // Optional satisfaction
+  };
+
+  const handleRevert = () => {
+    if (activeCard) {
+      setDraftCard(JSON.parse(JSON.stringify(activeCard)));
+      setIsDirty(false);
+    }
+  };
 
   // --- PERSISTENCE ---
   useEffect(() => {
@@ -341,7 +375,7 @@ const App = () => {
         {/* MAIN CONTENT AREA */}
         <main className="w-full max-w-7xl pt-24 pb-12 flex flex-col items-center">
 
-          {isSetupMode ? (
+          {isSetupMode && draftCard ? (
             /* --- EDIT MODE --- */
             <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 animate-fade-in">
               {/* Sidebar Config */}
@@ -351,22 +385,29 @@ const App = () => {
                   <div className="flex gap-4">
                     <label className="relative group cursor-pointer w-20 h-20 shrink-0">
                       <div className="w-full h-full rounded-2xl bg-zinc-800 overflow-hidden border border-zinc-700 group-hover:border-violet-500 transition-colors">
-                        {activeCard.personImage ? (
-                          <img src={activeCard.personImage} className="w-full h-full object-cover" />
+                        {draftCard.personImage ? (
+                          <img src={draftCard.personImage} className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex items-center justify-center h-full text-zinc-500"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
                         )}
                       </div>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => updateDraft({ personImage: reader.result });
+                          reader.readAsDataURL(file);
+                        }
+                      }} />
                     </label>
                     <div className="flex-1 space-y-2">
                       <input
-                        type="text" value={activeCard.name} onChange={(e) => updateActiveCard({ name: e.target.value })}
+                        type="text" value={draftCard.name} onChange={(e) => updateDraft({ name: e.target.value })}
                         className={`w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none`}
                         placeholder="Bingo Title..."
                       />
                       <input
-                        type="text" value={activeCard.instantWin} onChange={(e) => updateActiveCard({ instantWin: e.target.value })}
+                        type="text" value={draftCard.instantWin} onChange={(e) => updateDraft({ instantWin: e.target.value })}
                         className={`w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-sm`}
                         placeholder="Instant Win Condition..."
                       />
@@ -376,16 +417,45 @@ const App = () => {
 
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size: {activeCard.gridSize}x{activeCard.gridSize}</label>
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size: {draftCard.gridSize}x{draftCard.gridSize}</label>
                   </div>
+                  {/* Grid Size Change - Note: This requires complex logic to resize items array in draft. 
+                        For simplicity, we can just map simple resize logic here or use existing logic adapted for draft.
+                        Let's adapt updateGridSize to update draft. 
+                    */}
                   <input
-                    type="range" min="3" max="7" value={activeCard.gridSize} onChange={(e) => updateGridSize(e.target.value)}
+                    type="range" min="3" max="7" value={draftCard.gridSize}
+                    onChange={(e) => {
+                      const size = parseInt(e.target.value);
+                      const total = size * size;
+                      const newItems = Array(total).fill('');
+                      draftCard.items.forEach((it, i) => { if (i < total) newItems[i] = it; });
+                      updateDraft({ gridSize: size, items: newItems, markedSquares: Array(total).fill(false) });
+                    }}
                     className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-600"
                   />
                 </div>
 
+                {/* Save / Revert Controls */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={!isDirty}
+                    className={`flex-1 py-2 rounded-xl font-bold transition-all ${isDirty ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-900/20' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={handleRevert}
+                    disabled={!isDirty}
+                    className={`flex-1 py-2 rounded-xl font-bold transition-all ${isDirty ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                  >
+                    Revert
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
-                  <button onClick={() => updateActiveCard({ ...activeCard, items: Array(activeCard.gridSize * activeCard.gridSize).fill('') })}
+                  <button onClick={() => updateDraft({ items: Array(draftCard.gridSize * draftCard.gridSize).fill('') })}
                     className="btn-secondary text-xs">Clear Grid</button>
                   <button onClick={() => setShowResetConfirm(true)}
                     className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/20 hover:border-rose-900/30">Delete Card</button>
@@ -394,22 +464,23 @@ const App = () => {
 
               {/* Grid Inputs */}
               <div className="lg:col-span-8">
-                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${activeCard.gridSize}, 1fr)` }}>
-                  {activeCard.items.map((item, index) => (
-                    <div
+                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${draftCard.gridSize}, 1fr)` }}>
+                  {draftCard.items.map((item, index) => (
+                    <GridItem
                       key={index}
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleItemChange(index, e.target.innerText)}
+                      value={item}
+                      onChange={(val) => {
+                        const newItems = [...draftCard.items];
+                        newItems[index] = val;
+                        updateDraft({ items: newItems });
+                      }}
                       className={`
                          aspect-square w-full p-2 rounded-xl border outline-none transition-all
                          flex items-center justify-center text-center
                          text-sm md:text-base leading-tight
-                         bg-zinc-900/80 border-white/5 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10 cursor-text
+                         bg-zinc-900/80 border-white/5 focus-within:border-violet-500 focus-within:bg-zinc-900 focus-within:ring-4 focus-within:ring-violet-500/10
                      `}
-                    >
-                      {item}
-                    </div>
+                    />
                   ))}
                 </div>
               </div>
@@ -433,8 +504,11 @@ const App = () => {
         <SettingsModal
           show={showSettings} onClose={() => setShowSettings(false)}
           zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          cardOptions={{ showTitle: activeCard.showTitle, showImage: activeCard.showImage, imageStyle: activeCard.imageStyle }}
-          setCardOptions={(opts) => updateActiveCard(opts)}
+          cardOptions={isSetupMode && draftCard
+            ? { showTitle: draftCard.showTitle, showImage: draftCard.showImage, imageStyle: draftCard.imageStyle }
+            : { showTitle: activeCard.showTitle, showImage: activeCard.showImage, imageStyle: activeCard.imageStyle }
+          }
+          setCardOptions={(opts) => isSetupMode && draftCard ? updateDraft(opts) : updateActiveCard(opts)}
           actions={{
             onReset: () => { setShowSettings(false); setShowResetConfirm(true); },
             onDownload: () => { setShowSettings(false); downloadCardImage(); },
