@@ -88,12 +88,22 @@ const BingoCard = forwardRef(({ card, theme, zoomLevel, toggleSquare, markedSqua
 
             {/* Instant Win */}
             {instantWin && (
-                <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
-                    <div className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
-                        <span className="text-2xl filter drop-shadow hover:scale-110 transition-transform cursor-help">🌟</span>
+                <div
+                    onClick={onToggleInstantWin}
+                    className="mt-8 pt-6 border-t border-white/10 relative z-10 cursor-pointer group"
+                >
+                    <div className={`flex items-start gap-4 p-4 rounded-2xl transition-all duration-300 ${isInstantWinMarked ? 'bg-amber-500/20 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-gradient-to-r from-amber-500/10 to-orange-500/5 border-amber-500/20 group-hover:border-amber-500/40 group-hover:bg-amber-500/15'}`}>
+                        <span className={`text-2xl filter drop-shadow transition-transform duration-300 ${isInstantWinMarked ? 'scale-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'group-hover:scale-110'}`}>
+                            {isInstantWinMarked ? '✨' : '🌟'}
+                        </span>
                         <div>
-                            <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1 opacity-80">Instant Win</h3>
-                            <p className="text-amber-100 font-medium text-sm leading-snug">{instantWin}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest opacity-80">Instant Win</h3>
+                                {isInstantWinMarked && (
+                                    <span className="text-[9px] font-black bg-amber-500 text-black px-1.5 py-0.5 rounded uppercase animate-pulse">Activated</span>
+                                )}
+                            </div>
+                            <p className={`font-medium text-sm leading-snug transition-colors ${isInstantWinMarked ? 'text-white' : 'text-amber-100'}`}>{instantWin}</p>
                         </div>
                     </div>
                 </div>

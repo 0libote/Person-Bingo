@@ -29,6 +29,7 @@ const App = () => {
   const [isSetupMode, setIsSetupMode] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [winner, setWinner] = useState(false);
+  const [isInstantWinMarked, setIsInstantWinMarked] = useState(false);
 
 
 
@@ -190,30 +191,14 @@ const App = () => {
   if (!activeCard) return null; // Safety fallback
 
   // --- GAME LOGIC ---
-  const checkForWin = useCallback((currentMarked, currentItems) => {
-    const size = activeCard.gridSize;
+  const checkForWin = useCallback((currentMarked, currentItems, currentInstantWinMarked) => {
     let isWinner = false;
 
-    // Check rows
-    for (let i = 0; i < size; i++) {
-      if (currentMarked.slice(i * size, (i + 1) * size).every(Boolean)) isWinner = true;
-    }
-    // Check cols
-    for (let i = 0; i < size; i++) {
-      let colWin = true;
-      for (let j = 0; j < size; j++) {
-        if (!currentMarked[i + j * size]) colWin = false;
-      }
-      if (colWin) isWinner = true;
-    }
+    // NEW WIN CONDITION: All boxes must be ticked
+    if (currentMarked.every(Boolean)) isWinner = true;
 
-    // Check diagonals
-    let d1 = true, d2 = true;
-    for (let i = 0; i < size; i++) {
-      if (!currentMarked[i * size + i]) d1 = false;
-      if (!currentMarked[i * size + (size - 1 - i)]) d2 = false;
-    }
-    if (d1 || d2) isWinner = true;
+    // OR the instant win is ticked
+    if (currentInstantWinMarked) isWinner = true;
 
     // Only count as win if there are actual items
     const hasItems = currentItems.some(i => i.trim() !== '');
@@ -224,7 +209,14 @@ const App = () => {
     } else if (!isWinner) {
       setWinner(false);
     }
-  }, [winner, activeCard.gridSize]);
+  }, [winner]);
+
+  const toggleInstantWin = () => {
+    if (isSetupMode || !activeCard.instantWin) return;
+    const newState = !isInstantWinMarked;
+    setIsInstantWinMarked(newState);
+    checkForWin(activeCard.markedSquares, activeCard.items, newState);
+  };
 
   const triggerConfetti = () => {
     const duration = 2000;
@@ -245,7 +237,7 @@ const App = () => {
     newMarked[index] = !newMarked[index];
 
     updateActiveCard({ markedSquares: newMarked }); // History removed
-    checkForWin(newMarked, activeCard.items);
+    checkForWin(newMarked, activeCard.items, isInstantWinMarked);
   };
 
   // --- IMAGE & EXPORT (FIXED) ---
@@ -363,24 +355,17 @@ const App = () => {
           <div className="pointer-events-auto flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
             <ActionsMenu
               onShare={() => setShowShareModal(true)}
-              onRestart={() => setShowResetConfirm(true)}
+              onRestart={() => {
+                const newMarked = Array(activeCard.gridSize * activeCard.gridSize).fill(false);
+                updateActiveCard({ markedSquares: newMarked });
+                setIsInstantWinMarked(false);
+                setWinner(false);
+                setShowResetConfirm(false);
+              }}
+              onSettings={() => setShowSettings(true)}
+              onToggleMode={toggleMode}
+              isSetupMode={isSetupMode}
             />
-
-            <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/10 rounded-xl transition-colors cursor-pointer" title="Settings">
-              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-
-            {!isSetupMode && (
-              <>
-                <div className="h-6 w-px bg-white/10 mx-1"></div>
-                <button
-                  onClick={toggleMode}
-                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer`}
-                >
-                  Edit
-                </button>
-              </>
-            )}
           </div>
         </header>
 
@@ -508,6 +493,8 @@ const App = () => {
                 zoomLevel={zoomLevel}
                 toggleSquare={toggleSquare}
                 markedSquares={activeCard.markedSquares}
+                isInstantWinMarked={isInstantWinMarked}
+                onToggleInstantWin={toggleInstantWin}
               />
             </div>
           )}
