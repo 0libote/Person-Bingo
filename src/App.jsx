@@ -29,9 +29,9 @@ const App = () => {
   const [activeCardId, setActiveCardId] = useState(1);
   const [isSetupMode, setIsSetupMode] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [accentColor, setAccentColor] = useState('#ef4444');
   const [winner, setWinner] = useState(false);
   const [isInstantWinMarked, setIsInstantWinMarked] = useState(false);
-
 
 
   // App-wide View State
@@ -99,6 +99,12 @@ const App = () => {
   }, [cards, activeCardId, isSetupMode, zoomLevel]);
 
   // --- CARD HELPERS ---
+  // --- HELPERS ---
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '239, 68, 68';
+  };
+
   const updateActiveCard = (updates) => {
     setCards(prev => prev.map(c => c.id === activeCardId ? { ...c, ...updates } : c));
   };
@@ -368,7 +374,13 @@ const App = () => {
   const customStyle = {};
 
   return (
-    <div className={`min-h-screen text-white overflow-x-hidden`} style={customStyle}>
+    <div
+      className="min-h-screen relative overflow-x-hidden transition-colors duration-500"
+      style={{
+        '--accent-color': accentColor,
+        '--accent-color-rgb': hexToRgb(accentColor)
+      }}
+    >
       <div className="relative z-10 min-h-screen flex flex-col items-center p-4 md:p-8">
 
         {/* HEADER TOOLBAR */}
@@ -409,24 +421,43 @@ const App = () => {
               {/* Sidebar Config */}
               <div className={`lg:col-span-4 p-6 rounded-3xl glass-panel space-y-6 overflow-y-auto max-h-[80vh] scrollbar-thin`}>
 
-                {/* 1. Identity & Image Picker */}
+                {/* 1. Basic Info */}
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Card Title</label>
+                    <input
+                      type="text" value={draftCard.name} onChange={(e) => updateDraft({ name: e.target.value })}
+                      className="input-field"
+                      placeholder="Enter title..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Instant Win Condition</label>
+                    <input
+                      type="text" value={draftCard.instantWin} onChange={(e) => updateDraft({ instantWin: e.target.value })}
+                      className="input-field text-xs"
+                      placeholder="e.g. Shout BINGO!"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Image Management */}
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Card Identity</label>
-                  <div className="space-y-4">
-                    <div className="flex flex-col items-center gap-4 p-4 rounded-2xl bg-black/20 border border-white/5 group">
-                      <div className="relative w-32 h-32">
-                        <div className="w-full h-full rounded-2xl bg-zinc-800 overflow-hidden border-2 border-zinc-700 group-hover:border-violet-500 transition-all shadow-xl">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 block">Image & Style</label>
+                  <div className="p-4 rounded-2xl bg-black/20 border border-white/5 space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-20 h-20 shrink-0">
+                        <div className="w-full h-full rounded-2xl bg-zinc-800 overflow-hidden border-2 border-zinc-700 shadow-lg">
                           {draftCard.personImage ? (
                             <img src={draftCard.personImage} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-2">
-                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                              <span className="text-[10px] font-bold uppercase tracking-tight">No Image</span>
+                            <div className="flex items-center justify-center h-full text-zinc-600">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                             </div>
                           )}
                         </div>
-                        <label className="absolute -bottom-2 -right-2 p-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl shadow-lg cursor-pointer transition-all hover:scale-110 active:scale-95 border-2 border-zinc-900">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <label className="absolute -bottom-1 -right-1 p-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg shadow-lg cursor-pointer transition-all border border-white/10">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
@@ -437,49 +468,62 @@ const App = () => {
                           }} />
                         </label>
                       </div>
-                      <div className="w-full space-y-2">
-                        <input
-                          type="text" value={draftCard.name} onChange={(e) => updateDraft({ name: e.target.value })}
-                          className={`w-full px-4 py-2.5 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-sm transition-all focus:bg-zinc-950`}
-                          placeholder="Bingo Title..."
-                        />
-                        <input
-                          type="text" value={draftCard.instantWin} onChange={(e) => updateDraft({ instantWin: e.target.value })}
-                          className={`w-full px-4 py-2.5 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-xs transition-all focus:bg-zinc-950`}
-                          placeholder="Instant Win Condition..."
-                        />
+                      <div className="flex-1 space-y-2">
+                        <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/20 rounded-xl">
+                          <button
+                            onClick={() => updateDraft({ imageStyle: 'avatar' })}
+                            className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${draftCard.imageStyle !== 'background' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                          >
+                            Avatar
+                          </button>
+                          <button
+                            onClick={() => updateDraft({ imageStyle: 'background' })}
+                            className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${draftCard.imageStyle === 'background' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                          >
+                            Full Bg
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
+                            <span className="text-[10px] font-bold text-zinc-400">Title</span>
+                            <input type="checkbox" checked={draftCard.showTitle} onChange={(e) => updateDraft({ showTitle: e.target.checked })} className="w-3 h-3 accent-[var(--accent-color)]" />
+                          </label>
+                          {draftCard.imageStyle !== 'background' && (
+                            <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
+                              <span className="text-[10px] font-bold text-zinc-400">Avatar</span>
+                              <input type="checkbox" checked={draftCard.showImage} onChange={(e) => updateDraft({ showImage: e.target.checked })} className="w-3 h-3 accent-[var(--accent-color)]" />
+                            </label>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Win Conditions */}
+                {/* 3. Win Condition */}
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Win Condition</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Win Condition</label>
                   <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
                     <button
                       onClick={() => updateDraft({ winCondition: 'standard' })}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.winCondition === 'standard' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                      className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${draftCard.winCondition === 'standard' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
                     >
-                      Standard Bingo
+                      Line Win
                     </button>
                     <button
                       onClick={() => updateDraft({ winCondition: 'full' })}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.winCondition === 'full' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                      className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${draftCard.winCondition === 'full' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
                     >
                       Full Grid
                     </button>
                   </div>
-                  <p className="text-[10px] text-zinc-600 mt-2 px-1">
-                    {draftCard.winCondition === 'standard' ? 'Win with any row, column, or diagonal line.' : 'Win only when every single box is ticked.'}
-                  </p>
                 </div>
 
-                {/* 3. Grid Settings */}
+                {/* 4. Grid Settings */}
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size: {draftCard.gridSize}x{draftCard.gridSize}</label>
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Grid Size: {draftCard.gridSize}x{draftCard.gridSize}</label>
                     </div>
                     <input
                       type="range" min="3" max="7" value={draftCard.gridSize}
@@ -490,81 +534,37 @@ const App = () => {
                         draftCard.items.forEach((it, i) => { if (i < total) newItems[i] = it; });
                         updateDraft({ gridSize: size, items: newItems, markedSquares: Array(total).fill(false) });
                       }}
-                      className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                      className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[var(--accent-color)]"
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Display Style</label>
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
-                        <button
-                          onClick={() => updateDraft({ imageStyle: 'avatar' })}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.imageStyle !== 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
-                        >
-                          Avatar
-                        </button>
-                        <button
-                          onClick={() => updateDraft({ imageStyle: 'background' })}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.imageStyle === 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
-                        >
-                          Full Bg
-                        </button>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
-                          <span className="text-sm font-medium text-zinc-300">Show Title</span>
-                          <input
-                            type="checkbox"
-                            checked={draftCard.showTitle}
-                            onChange={(e) => updateDraft({ showTitle: e.target.checked })}
-                            className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-950 w-4 h-4 cursor-pointer"
-                          />
-                        </label>
-
-                        {draftCard.imageStyle !== 'background' && (
-                          <label className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
-                            <span className="text-sm font-medium text-zinc-300">Show Avatar</span>
-                            <input
-                              type="checkbox"
-                              checked={draftCard.showImage}
-                              onChange={(e) => updateDraft({ showImage: e.target.checked })}
-                              className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-950 w-4 h-4 cursor-pointer"
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 </div>
 
-                {/* 4. Actions */}
-                <div className="pt-4 border-t border-white/5 space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => updateDraft({ items: Array(draftCard.gridSize * draftCard.gridSize).fill('') })}
-                      className="btn-secondary text-xs cursor-pointer py-2">Clear Grid</button>
-                    <button onClick={() => setShowResetConfirm(true)}
-                      className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/10 border-rose-900/30 hover:border-rose-900/50 cursor-pointer py-2">Delete Card</button>
-                  </div>
+                {/* 5. Actions */}
+                <div className="pt-6 border-t border-white/5 space-y-4">
+                  <button onClick={() => setShowResetConfirm(true)}
+                    className="btn-secondary w-full text-xs text-rose-500/80 hover:text-rose-500 py-3">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete This Card
+                  </button>
 
                   <div className="flex gap-2">
                     <button
                       onClick={handleSave}
                       disabled={!isDirty}
-                      className={`flex-1 py-3 rounded-xl font-bold transition-all cursor-pointer ${isDirty ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-900/20' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                      className={`btn-primary flex-1 py-3 ${!isDirty && 'opacity-50 grayscale cursor-not-allowed shadow-none'}`}
                     >
-                      Save
+                      Save Changes
                     </button>
                     <button
                       onClick={toggleMode}
-                      className="flex-1 py-3 rounded-xl font-bold transition-all shadow-lg bg-violet-600 text-white hover:bg-violet-500 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="btn-primary flex-1 py-3 bg-zinc-100 !text-zinc-950 shadow-white/10 hover:brightness-100 hover:bg-white"
                     >
-                      Play
+                      Play Now
                     </button>
                   </div>
                 </div>
               </div>
+
 
 
               {/* Grid Inputs */}
@@ -611,6 +611,7 @@ const App = () => {
         <SettingsModal
           show={showSettings} onClose={() => setShowSettings(false)}
           zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
+          accentColor={accentColor} setAccentColor={setAccentColor}
           actions={{
             onClearAllData: () => { setShowSettings(false); setShowClearDataConfirm(true); }
           }}

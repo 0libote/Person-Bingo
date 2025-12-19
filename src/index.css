@@ -1,86 +1,94 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --accent-color: #ef4444;
+    --accent-color-rgb: 239, 68, 68;
+  }
+
   body {
     @apply bg-zinc-950 text-white antialiased font-sans;
     background-image:
-      radial-gradient(circle at 50% 0%, rgba(120, 119, 198, 0.1), transparent 50%),
-      radial-gradient(circle at 0% 50%, rgba(56, 189, 248, 0.05), transparent 50%),
-      radial-gradient(circle at 100% 50%, rgba(236, 72, 153, 0.05), transparent 50%);
+      radial-gradient(circle at 50% 0%, rgba(var(--accent-color-rgb), 0.1), transparent 50%),
+      radial-gradient(circle at 0% 50%, rgba(var(--accent-color-rgb), 0.05), transparent 50%),
+      radial-gradient(circle at 100% 50%, rgba(var(--accent-color-rgb), 0.05), transparent 50%);
     background-attachment: fixed;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-zinc-900/50;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-color-rgb), 0.3);
+    @apply rounded-full border-2 border-zinc-900/50 hover:bg-opacity-50 transition-colors;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--accent-color-rgb), 0.5);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold shadow-lg shadow-violet-600/20 active:scale-95 transition-all duration-200;
+    @apply relative px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-300 overflow-hidden cursor-pointer active:scale-95 flex items-center justify-center gap-2;
+    background-color: var(--accent-color);
+    box-shadow: 0 4px 15px -3px rgba(var(--accent-color-rgb), 0.3);
+  }
+
+  .btn-primary:hover {
+    @apply brightness-110 -translate-y-0.5;
+    box-shadow: 0 10px 20px -5px rgba(var(--accent-color-rgb), 0.4);
   }
 
   .btn-secondary {
-    @apply px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium border border-zinc-700/50 hover:border-zinc-600 active:scale-95 transition-all duration-200;
+    @apply relative px-5 py-2.5 rounded-xl font-bold transition-all duration-300 cursor-pointer active:scale-95 flex items-center justify-center gap-2;
+    @apply bg-zinc-900/50 border border-white/5 text-zinc-400;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-zinc-800/80 border-white/10;
+    color: var(--accent-color);
   }
 
   .glass-panel {
-    @apply bg-zinc-900/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-zinc-900/60 backdrop-blur-2xl border border-white/10 shadow-2xl;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-[var(--accent-color)] outline-none text-sm transition-all focus:bg-zinc-950;
   }
 }
 
 /* Animations */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out forwards;
-}
-
-.animate-scale-in {
-  animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.5s ease-out forwards;
-}
-
-.slide-up-animation {
-  animation: slide-up 0.5s ease-out forwards;
-}
+.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+.animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
 
 @keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 0px currentColor); }
-  50% { filter: drop-shadow(0 0 8px currentColor); }
+  0%, 100% { filter: drop-shadow(0 0 0px var(--accent-color)); }
+  50% { filter: drop-shadow(0 0 8px var(--accent-color)); }
 }
 
 .animate-pulse-glow {

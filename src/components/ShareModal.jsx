@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const ShareModal = ({ show, onClose, onDownload, onCopyImage, cardConfig }) => {
+const ShareModal = ({ show, onClose, onDownload, onCopy, cardConfig }) => {
     if (!show) return null;
 
     const [copiedConfig, setCopiedConfig] = useState(false);
@@ -14,8 +14,8 @@ const ShareModal = ({ show, onClose, onDownload, onCopyImage, cardConfig }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-            <div className="glass-panel p-6 rounded-3xl max-w-sm w-full relative overflow-hidden slide-up-animation">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-white/90">
+            <div className="glass-panel p-6 md:p-8 rounded-3xl max-w-sm w-full relative overflow-hidden slide-up-animation shadow-2xl">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -24,49 +24,45 @@ const ShareModal = ({ show, onClose, onDownload, onCopyImage, cardConfig }) => {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
 
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                    Share Card
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[var(--accent-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                    Share Bingo Card
                 </h3>
 
-                <div className="space-y-4">
-                    {/* Image Actions */}
-                    <button onClick={onDownload} className="w-full p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 border border-white/5 flex items-center gap-3 transition-all duration-200 cursor-pointer group active:scale-[0.98]">
-                        <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        </div>
-                        <div className="text-left">
-                            <div className="font-bold text-zinc-200 text-sm">Download Image</div>
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-tight font-medium">Save as PNG to device</div>
-                        </div>
-                    </button>
+                <div className="space-y-6">
+                    <div className="space-y-3">
+                        <button
+                            onClick={onDownload}
+                            className="w-full btn-primary py-3.5 group"
+                        >
+                            <svg className="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            Download PNG Image
+                        </button>
+                        <button
+                            onClick={onCopy}
+                            className="w-full btn-secondary py-3.5"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                            Copy Image to Clipboard
+                        </button>
+                    </div>
 
-                    <button onClick={onCopyImage} className="w-full p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 border border-white/5 flex items-center gap-3 transition-all duration-200 cursor-pointer group active:scale-[0.98]">
-                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                        </div>
-                        <div className="text-left">
-                            <div className="font-bold text-zinc-200 text-sm">Copy to Clipboard</div>
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-tight font-medium">Paste directly into apps</div>
-                        </div>
-                    </button>
+                    <div className="relative">
+                        <div className="absolute inset-x-0 top-1/2 h-px bg-white/5" />
+                        <span className="relative z-10 block w-fit mx-auto px-4 bg-zinc-900 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Share Configuration</span>
+                    </div>
 
-                    <hr className="border-white/5 my-2" />
-
-                    {/* Config String */}
-                    <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Config Data</span>
-                            {copiedConfig && <span className="text-[10px] text-emerald-400 font-bold animate-pulse">Copied!</span>}
-                        </div>
+                    <div className="space-y-3">
+                        <p className="text-[11px] text-zinc-400 text-center leading-relaxed">
+                            Share this card's setup with others by copying the config string.
+                        </p>
                         <button
                             onClick={handleCopyConfig}
-                            className="w-full py-2.5 rounded-xl bg-zinc-950/50 hover:bg-emerald-600/10 hover:text-emerald-400 text-zinc-400 text-xs font-mono border border-dashed border-zinc-700 hover:border-emerald-500/50 transition-all cursor-pointer flex items-center justify-center gap-2 group active:scale-[0.98]"
+                            className="w-full btn-secondary text-xs py-3 border-dashed border-zinc-700 hover:border-zinc-500"
                         >
-                            <svg className="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                            Copy Config String
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                            {copiedConfig ? 'Config Copied!' : 'Copy Config String'}
                         </button>
-                        <p className="text-[9px] text-zinc-600 mt-2 text-center leading-tight">Share this text with friends to import this card setup.</p>
                     </div>
                 </div>
             </div>
