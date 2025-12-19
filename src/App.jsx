@@ -23,7 +23,8 @@ const App = () => {
     showImage: true,
     imageStyle: 'avatar',
     themeName: 'cyber',
-    customColors: { start: '#8b5cf6', end: '#ec4899' }
+    customColors: { start: '#8b5cf6', end: '#ec4899' },
+    winCondition: 'full' // 'full' or 'standard'
   }]);
   const [activeCardId, setActiveCardId] = useState(1);
   const [isSetupMode, setIsSetupMode] = useState(true);
@@ -114,7 +115,8 @@ const App = () => {
       personImage: null,
       showTitle: true,
       showImage: true,
-      imageStyle: 'avatar'
+      imageStyle: 'avatar',
+      winCondition: 'full'
     }]);
     setActiveCardId(newId);
     setIsSetupMode(true);
@@ -180,7 +182,7 @@ const App = () => {
         <h1 className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Person Bingo</h1>
         <button
           onClick={handleAddCard}
-          className="px-8 py-4 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white text-xl font-bold shadow-xl shadow-violet-600/20 transition-all hover:scale-105"
+          className="btn-primary"
         >
           Create Bingo Card
         </button>
@@ -194,11 +196,40 @@ const App = () => {
   const checkForWin = useCallback((currentMarked, currentItems, currentInstantWinMarked) => {
     let isWinner = false;
 
-    // NEW WIN CONDITION: All boxes must be ticked
-    if (currentMarked.every(Boolean)) isWinner = true;
-
-    // OR the instant win is ticked
+    // Instant win always wins
     if (currentInstantWinMarked) isWinner = true;
+
+    if (!isWinner) {
+      if (activeCard.winCondition === 'standard') {
+        const size = activeCard.gridSize;
+        // Check rows
+        for (let i = 0; i < size; i++) {
+          if (currentMarked.slice(i * size, (i + 1) * size).every(Boolean)) isWinner = true;
+        }
+        // Check cols
+        if (!isWinner) {
+          for (let i = 0; i < size; i++) {
+            let colWin = true;
+            for (let j = 0; j < size; j++) {
+              if (!currentMarked[i + j * size]) colWin = false;
+            }
+            if (colWin) isWinner = true;
+          }
+        }
+        // Check diagonals
+        if (!isWinner) {
+          let d1 = true, d2 = true;
+          for (let i = 0; i < size; i++) {
+            if (!currentMarked[i * size + i]) d1 = false;
+            if (!currentMarked[i * size + (size - 1 - i)]) d2 = false;
+          }
+          if (d1 || d2) isWinner = true;
+        }
+      } else {
+        // Full grid win condition
+        if (currentMarked.every(Boolean)) isWinner = true;
+      }
+    }
 
     // Only count as win if there are actual items
     const hasItems = currentItems.some(i => i.trim() !== '');
@@ -209,7 +240,7 @@ const App = () => {
     } else if (!isWinner) {
       setWinner(false);
     }
-  }, [winner]);
+  }, [winner, activeCard.winCondition, activeCard.gridSize]);
 
   const toggleInstantWin = () => {
     if (isSetupMode || !activeCard.instantWin) return;
@@ -376,72 +407,147 @@ const App = () => {
             /* --- EDIT MODE --- */
             <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 animate-fade-in">
               {/* Sidebar Config */}
-              <div className={`lg:col-span-4 p-6 rounded-3xl glass-panel space-y-6`}>
+              <div className={`lg:col-span-4 p-6 rounded-3xl glass-panel space-y-6 overflow-y-auto max-h-[80vh] scrollbar-thin`}>
+
+                {/* 1. Identity & Image Picker */}
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Identity</label>
-                  <div className="flex gap-4">
-                    <label className="relative group cursor-pointer w-20 h-20 shrink-0">
-                      <div className="w-full h-full rounded-2xl bg-zinc-800 overflow-hidden border border-zinc-700 group-hover:border-violet-500 transition-colors">
-                        {draftCard.personImage ? (
-                          <img src={draftCard.personImage} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-zinc-500"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
-                        )}
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Card Identity</label>
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center gap-4 p-4 rounded-2xl bg-black/20 border border-white/5 group">
+                      <div className="relative w-32 h-32">
+                        <div className="w-full h-full rounded-2xl bg-zinc-800 overflow-hidden border-2 border-zinc-700 group-hover:border-violet-500 transition-all shadow-xl">
+                          {draftCard.personImage ? (
+                            <img src={draftCard.personImage} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-2">
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                              <span className="text-[10px] font-bold uppercase tracking-tight">No Image</span>
+                            </div>
+                          )}
+                        </div>
+                        <label className="absolute -bottom-2 -right-2 p-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl shadow-lg cursor-pointer transition-all hover:scale-110 active:scale-95 border-2 border-zinc-900">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => updateDraft({ personImage: reader.result });
+                              reader.readAsDataURL(file);
+                            }
+                          }} />
+                        </label>
                       </div>
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => updateDraft({ personImage: reader.result });
-                          reader.readAsDataURL(file);
-                        }
-                      }} />
-                    </label>
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text" value={draftCard.name} onChange={(e) => updateDraft({ name: e.target.value })}
-                        className={`w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none`}
-                        placeholder="Bingo Title..."
-                      />
-                      <input
-                        type="text" value={draftCard.instantWin} onChange={(e) => updateDraft({ instantWin: e.target.value })}
-                        className={`w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-sm`}
-                        placeholder="Instant Win Condition..."
-                      />
+                      <div className="w-full space-y-2">
+                        <input
+                          type="text" value={draftCard.name} onChange={(e) => updateDraft({ name: e.target.value })}
+                          className={`w-full px-4 py-2.5 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-sm transition-all focus:bg-zinc-950`}
+                          placeholder="Bingo Title..."
+                        />
+                        <input
+                          type="text" value={draftCard.instantWin} onChange={(e) => updateDraft({ instantWin: e.target.value })}
+                          className={`w-full px-4 py-2.5 rounded-xl bg-zinc-950/50 border border-zinc-800 focus:border-violet-500 outline-none text-xs transition-all focus:bg-zinc-950`}
+                          placeholder="Instant Win Condition..."
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
+                {/* 2. Win Conditions */}
                 <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size: {draftCard.gridSize}x{draftCard.gridSize}</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Win Condition</label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
+                    <button
+                      onClick={() => updateDraft({ winCondition: 'standard' })}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.winCondition === 'standard' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                    >
+                      Standard Bingo
+                    </button>
+                    <button
+                      onClick={() => updateDraft({ winCondition: 'full' })}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.winCondition === 'full' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                    >
+                      Full Grid
+                    </button>
                   </div>
-                  {/* Grid Size Change - Note: This requires complex logic to resize items array in draft. 
-                        For simplicity, we can just map simple resize logic here or use existing logic adapted for draft.
-                        Let's adapt updateGridSize to update draft. 
-                    */}
-                  <input
-                    type="range" min="3" max="7" value={draftCard.gridSize}
-                    onChange={(e) => {
-                      const size = parseInt(e.target.value);
-                      const total = size * size;
-                      const newItems = Array(total).fill('');
-                      draftCard.items.forEach((it, i) => { if (i < total) newItems[i] = it; });
-                      updateDraft({ gridSize: size, items: newItems, markedSquares: Array(total).fill(false) });
-                    }}
-                    className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-600"
-                  />
+                  <p className="text-[10px] text-zinc-600 mt-2 px-1">
+                    {draftCard.winCondition === 'standard' ? 'Win with any row, column, or diagonal line.' : 'Win only when every single box is ticked.'}
+                  </p>
                 </div>
 
+                {/* 3. Grid Settings */}
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Grid Size: {draftCard.gridSize}x{draftCard.gridSize}</label>
+                    </div>
+                    <input
+                      type="range" min="3" max="7" value={draftCard.gridSize}
+                      onChange={(e) => {
+                        const size = parseInt(e.target.value);
+                        const total = size * size;
+                        const newItems = Array(total).fill('');
+                        draftCard.items.forEach((it, i) => { if (i < total) newItems[i] = it; });
+                        updateDraft({ gridSize: size, items: newItems, markedSquares: Array(total).fill(false) });
+                      }}
+                      className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Display Style</label>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
+                        <button
+                          onClick={() => updateDraft({ imageStyle: 'avatar' })}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.imageStyle !== 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                        >
+                          Avatar
+                        </button>
+                        <button
+                          onClick={() => updateDraft({ imageStyle: 'background' })}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${draftCard.imageStyle === 'background' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-400'}`}
+                        >
+                          Full Bg
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
+                          <span className="text-sm font-medium text-zinc-300">Show Title</span>
+                          <input
+                            type="checkbox"
+                            checked={draftCard.showTitle}
+                            onChange={(e) => updateDraft({ showTitle: e.target.checked })}
+                            className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-950 w-4 h-4 cursor-pointer"
+                          />
+                        </label>
+
+                        {draftCard.imageStyle !== 'background' && (
+                          <label className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-colors">
+                            <span className="text-sm font-medium text-zinc-300">Show Avatar</span>
+                            <input
+                              type="checkbox"
+                              checked={draftCard.showImage}
+                              onChange={(e) => updateDraft({ showImage: e.target.checked })}
+                              className="rounded border-zinc-600 text-violet-600 focus:ring-violet-500 bg-zinc-950 w-4 h-4 cursor-pointer"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Actions */}
                 <div className="pt-4 border-t border-white/5 space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => updateDraft({ items: Array(draftCard.gridSize * draftCard.gridSize).fill('') })}
-                      className="btn-secondary text-xs cursor-pointer">Clear Grid</button>
+                      className="btn-secondary text-xs cursor-pointer py-2">Clear Grid</button>
                     <button onClick={() => setShowResetConfirm(true)}
-                      className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/20 hover:border-rose-900/30 cursor-pointer">Delete Card</button>
+                      className="btn-secondary text-xs text-rose-400 hover:bg-rose-900/10 border-rose-900/30 hover:border-rose-900/50 cursor-pointer py-2">Delete Card</button>
                   </div>
 
-                  {/* Save / Play Controls */}
                   <div className="flex gap-2">
                     <button
                       onClick={handleSave}
@@ -452,13 +558,14 @@ const App = () => {
                     </button>
                     <button
                       onClick={toggleMode}
-                      className={`flex-1 py-3 rounded-xl font-bold transition-all shadow-lg bg-violet-600 text-white hover:scale-105 cursor-pointer`}
+                      className="flex-1 py-3 rounded-xl font-bold transition-all shadow-lg bg-violet-600 text-white hover:bg-violet-500 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     >
                       Play
                     </button>
                   </div>
                 </div>
               </div>
+
 
               {/* Grid Inputs */}
               <div className="lg:col-span-8">
@@ -504,11 +611,6 @@ const App = () => {
         <SettingsModal
           show={showSettings} onClose={() => setShowSettings(false)}
           zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          cardOptions={isSetupMode && draftCard
-            ? { showTitle: draftCard.showTitle, showImage: draftCard.showImage, imageStyle: draftCard.imageStyle }
-            : { showTitle: activeCard.showTitle, showImage: activeCard.showImage, imageStyle: activeCard.imageStyle }
-          }
-          setCardOptions={(opts) => isSetupMode && draftCard ? updateDraft(opts) : updateActiveCard(opts)}
           actions={{
             onClearAllData: () => { setShowSettings(false); setShowClearDataConfirm(true); }
           }}
@@ -540,10 +642,10 @@ const App = () => {
                   }
                   setIsSetupMode(false);
                 }}
-                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-colors cursor-pointer">
+                  className="btn-primary w-full">
                   Discard & Play
                 </button>
-                <button onClick={() => setShowUnsavedWarning(false)} className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition-colors">
+                <button onClick={() => setShowUnsavedWarning(false)} className="btn-secondary w-full">
                   Cancel
                 </button>
               </div>
@@ -560,7 +662,7 @@ const App = () => {
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowClearDataConfirm(false)} className="btn-secondary">Cancel</button>
                 <button onClick={handleClearAllData}
-                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold">
+                  className="btn-secondary text-rose-400 bg-rose-900/10 border-rose-900/30 hover:bg-rose-600 hover:text-white hover:border-rose-500">
                   Yes, Delete Everything
                 </button>
               </div>
@@ -575,13 +677,13 @@ const App = () => {
               <h3 className="text-lg font-bold text-white mb-2">Are you sure?</h3>
               <p className="text-zinc-400 mb-6 text-sm">This will clear the current card's content.</p>
               <div className="flex justify-end gap-3">
-                <button onClick={() => setShowResetConfirm(false)} className="btn-secondary">Cancel</button>
+                <button onClick={() => setShowResetConfirm(false)} className="btn-secondary text-sm">Cancel</button>
                 <button onClick={() => {
                   updateActiveCard({ items: Array(activeCard.gridSize * activeCard.gridSize).fill(''), name: 'New Card', instantWin: '', personImage: null });
                   setWinner(false);
                   setShowResetConfirm(false);
                 }}
-                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold">
+                  className="btn-primary text-sm bg-rose-600 hover:bg-rose-500 shadow-rose-900/20">
                   Confirm
                 </button>
               </div>
