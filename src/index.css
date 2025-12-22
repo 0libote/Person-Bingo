@@ -26,18 +26,18 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(var(--accent-color-rgb), 0.3);
-    @apply rounded-full border-2 border-zinc-900/50 transition-colors;
+    background: rgba(var(--accent-color-rgb), 0.2);
+    @apply rounded-full border-2 border-transparent transition-colors;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--accent-color-rgb), 0.5);
+    background: rgba(var(--accent-color-rgb), 0.4);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply relative px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-300 overflow-hidden cursor-pointer active:scale-95 flex items-center justify-center gap-2;
+    @apply relative px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 overflow-hidden cursor-pointer active:scale-95 flex items-center justify-center gap-2;
     background-color: var(--accent-color);
     box-shadow: 0 4px 15px -3px rgba(var(--accent-color-rgb), 0.3);
   }

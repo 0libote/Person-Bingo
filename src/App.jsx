@@ -40,6 +40,7 @@ const App = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [showClearDataConfirm, setShowClearDataConfirm] = useState(false);
+  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: string }
   const cardRef = useRef(null);
 
   const activeCard = cards.find(c => c.id === activeCardId) || cards[0];
@@ -181,6 +182,31 @@ const App = () => {
     window.location.reload();
   };
 
+  const showNotify = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleImportCard = (jsonString) => {
+    try {
+      const imported = JSON.parse(jsonString);
+      if (!imported.id || !imported.items) throw new Error('Invalid card format');
+
+      const newCard = {
+        ...imported,
+        id: Date.now(), // New ID to prevent conflicts
+        markedSquares: Array(imported.items.length).fill(false) // Reset marks on import
+      };
+
+      setCards(prev => [...prev, newCard]);
+      setActiveCardId(newCard.id);
+      setIsSetupMode(true);
+      showNotify('Card imported successfully!');
+    } catch (e) {
+      showNotify('Failed to import card. Invalid format.', 'error');
+    }
+  };
+
   // --- RENDERING EMPTY STATE ---
   if (!activeCard && cards.length === 0) {
     return (
@@ -290,35 +316,40 @@ const App = () => {
   const processCapture = async () => {
     if (!cardRef.current) return null;
 
-    // 1. Clone the node to avoid messing with current view
+    // 1. Create a specialized capture container to ensure consistency
     const original = cardRef.current;
+    const captureArea = document.createElement('div');
+    captureArea.style.position = 'fixed';
+    captureArea.style.top = '-9999px';
+    captureArea.style.left = '-9999px';
+    captureArea.style.width = '1000px'; // Fixed width for consistent export size
+    captureArea.style.backgroundColor = '#09090b'; // Matching bg
+    document.body.appendChild(captureArea);
+
     const clone = original.cloneNode(true);
-
-    // 2. Style the clone to be flat and clean
     clone.style.transform = 'none';
-    clone.style.position = 'fixed';
-    clone.style.top = '-9999px';
-    clone.style.left = '-9999px';
-    clone.style.zIndex = '-1';
-    clone.style.borderRadius = '0'; // Optional: sharp corners for better export? No, keep rounded.
+    clone.style.width = '100%';
+    clone.style.margin = '0';
+    clone.style.padding = '40px'; // Add padding for clean export
+    captureArea.appendChild(clone);
 
-    // Append to body temporarily
-    document.body.appendChild(clone);
+    // 3. Wait for components to settle
+    await new Promise(r => setTimeout(r, 100));
 
-    // 3. Wait for images to load explicitly if needed (usually handled by browser cache for clones)
-    // 4. Capture
     try {
       const canvas = await html2canvas(clone, {
-        backgroundColor: null,
-        scale: 3, // High Res
+        backgroundColor: '#09090b',
+        scale: 2,
         useCORS: true,
         logging: false,
-        allowTaint: true
+        allowTaint: true,
+        width: 1000,
+        windowWidth: 1000
       });
-      document.body.removeChild(clone);
+      document.body.removeChild(captureArea);
       return canvas;
     } catch (err) {
-      document.body.removeChild(clone);
+      if (captureArea.parentNode) document.body.removeChild(captureArea);
       throw err;
     }
   };
@@ -336,7 +367,7 @@ const App = () => {
       }
     } catch (err) {
       console.error('Download error:', err);
-      alert("Failed to generate image. Please try again.");
+      showNotify("Failed to generate image.", "error");
     }
   };
 
@@ -349,14 +380,14 @@ const App = () => {
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]);
-          alert('Copied to clipboard!');
+          showNotify('Copied to clipboard!');
         } else {
           throw new Error('Failed to create image blob');
         }
       }
     } catch (err) {
       console.error('Copy error:', err);
-      alert('Failed to copy image. Your browser may not support clipboard images.');
+      showNotify('Failed to copy image.', 'error');
     }
   };
 
@@ -391,11 +422,21 @@ const App = () => {
             <CardSwitcher
               cards={cards} activeCardId={activeCardId}
               onSwitch={setActiveCardId} onAdd={handleAddCard} onDelete={handleDeleteCard}
+              onImport={handleImportCard}
             />
           </div>
 
           {/* Right: Actions */}
-          <div className="pointer-events-auto flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+          <div className="pointer-events-auto flex items-center gap-2 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+            {!isSetupMode && (
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="p-3 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 hover:text-violet-300 transition-all cursor-pointer border border-violet-500/20 group"
+                title="Share Card"
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              </button>
+            )}
             <ActionsMenu
               onShare={() => setShowShareModal(true)}
               onRestart={() => {
@@ -688,6 +729,26 @@ const App = () => {
                   Confirm
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Toast */}
+        {notification && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] animate-fade-in">
+            <div className={`
+              px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-3
+              ${notification.type === 'error'
+                ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              }
+            `}>
+              {notification.type === 'error' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              )}
+              <span className="text-sm font-bold tracking-tight">{notification.message}</span>
             </div>
           </div>
         )}
